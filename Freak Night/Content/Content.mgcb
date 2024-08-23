@@ -13,3 +13,13 @@
 
 #---------------------------------- Content ---------------------------------#
 
+#begin ExampleBuilding.txt
+/copy:ExampleBuilding.txt
+
+#begin IBM Plex Mono Light.spritefont
+/importer:FontDescriptionImporter
+/processor:FontDescriptionProcessor
+/processorParam:PremultiplyAlpha=True
+/processorParam:TextureFormat=Compressed
+/build:IBM Plex Mono Light.spritefont
+
