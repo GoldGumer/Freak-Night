@@ -1,0 +1,50 @@
+{
+	"Room": [
+		{
+			"name": "Entrance",
+			"id": 0,
+			"width": 5,
+			"height": 5,
+			"items": [
+				{
+					"name": "Sword",
+					"description": "Metal straight sword with a sheath.",
+					"id": 0,
+					"xPos": 2,
+					"yPos": 2
+				}
+			],
+			"interactables": [
+				{
+					"name": "Door",
+					"id": 0,
+					"xPos": -1,
+					"yPos": 2
+				}
+			]
+		},
+		{
+			"name": "Room1",
+			"id": 1,
+			"width": 10,
+			"height": 10,
+			"items": [
+				{
+					"name": "Sword",
+					"description": "Metal straight sword with a sheath.",
+					"id": 0,
+					"xPos": 2,
+					"yPos": 2
+				}
+			],
+			"interactables": [
+				{
+					"name": "Door",
+					"id": 0,
+					"xPos": 5,
+					"yPos": 10
+				}
+			]
+		}
+	]
+}

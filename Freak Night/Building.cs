@@ -1,5 +1,7 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Numerics;
 
@@ -9,58 +11,11 @@ public class Building
 
     public Building(string path)
     {
-        StreamReader sr = new StreamReader(path);
-
-        List<Room> _rooms = new List<Room>();
-
-        while (!sr.EndOfStream) 
+        using (StreamReader sr = new StreamReader(path))
         {
-            string roomCount = sr.ReadLine();
-            for (int i = 0; i < int.Parse(roomCount); i++) 
-            { 
-                string roomName = sr.ReadLine();
-                int roomID = int.Parse(sr.ReadLine());
-                int width = int.Parse(sr.ReadLine());
-                int height = int.Parse(sr.ReadLine());
-                
-                int itemCount;
-                List<Item> items = new List<Item>();
-
-                if (int.TryParse(sr.ReadLine(), out itemCount))
-                {
-                    for (int j = 0; j < itemCount; j++)
-                    {
-                        string itemName = sr.ReadLine();
-                        string itemDescription = sr.ReadLine();
-                        int id = int.Parse(sr.ReadLine());
-                        int xPos = int.Parse(sr.ReadLine());
-                        int yPos = int.Parse(sr.ReadLine());
-                        items.Add(new Item(itemName, itemDescription, id, xPos, yPos));
-                    }
-                }
-
-                int interactableCount;
-                List<Interactable> interactables = new List<Interactable>();
-
-                if (int.TryParse(sr.ReadLine(), out interactableCount))
-                {
-                    for (int j = 0; j < interactableCount; j++)
-                    {
-                        string interactableName = sr.ReadLine();
-                        int id = int.Parse(sr.ReadLine());
-                        int xPos = int.Parse(sr.ReadLine());
-                        int yPos = int.Parse(sr.ReadLine());
-                        interactables.Add(new Interactable(interactableName, id, xPos, yPos));
-                    }
-                }
-                
-
-                _rooms.Add(new Room(roomName, roomID, width, height, items, interactables));
-            }
+            string json = sr.ReadToEnd();
+            rooms = JsonConvert.DeserializeObject<Building>(json).rooms;
         }
-        sr.Close();
-
-        rooms = _rooms;
     }
 
     public Room GetRoomByID(int id)
@@ -76,13 +31,25 @@ public class Building
     }
 }
 
+[JsonObject("Room")]
 public class Room
 {
+    [JsonProperty("name")]
     public string name { get; }
+    
+    [JsonProperty("id")]
     public int id { get; }
+
+    [JsonProperty("width")]
     public int width { get; }
+    
+    [JsonProperty("height")]
     public int height { get; }
+    
+    [JsonProperty("items")]
     public List<Item> items { get; }
+    
+    [JsonProperty("interactables")]
     public List<Interactable> interactables { get; }
 
     public Room(string _name, int _id, int _width, int _height, List<Item> _items, List<Interactable> _interactables)
@@ -179,11 +146,19 @@ public class Room
     }
 }
 
+[JsonObject("Interactable")]
 public class Interactable
 {
+    [JsonProperty("name")]
     public string name { get; }
+
+    [JsonProperty("id")]
     public int id { get; }
+
+    [JsonProperty("xPos")]
     public int xPos { get; }
+
+    [JsonProperty("yPos")]
     public int yPos { get; }
 
     public Interactable()
@@ -215,12 +190,22 @@ public class Interactable
     }
 }
 
+[JsonObject("Item")]
 public class Item
 {
+    [JsonProperty("name")]
     public string name { get; }
+    
+    [JsonProperty("description")]
     public string description { get; }
+
+    [JsonProperty("id")]
     public int id { get; }
+
+    [JsonProperty("xPos")]
     public int xPos { get; }
+
+    [JsonProperty("yPos")]
     public int yPos { get; }
 
     public Item()

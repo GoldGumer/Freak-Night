@@ -57,7 +57,7 @@ namespace Freak_Night
 
             font = Content.Load<SpriteFont>("IBM Plex Mono Light");
 
-            building = new Building(Path.Combine(Content.RootDirectory, "ExampleBuilding.txt"));
+            building = new Building(Path.Combine(Content.RootDirectory, "ExampleBuilding.json"));
         }
 
         protected override void Update(GameTime gameTime)
