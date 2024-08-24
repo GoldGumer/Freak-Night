@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Numerics;
 
 public class Building
 {
-    List<Room> rooms;
+    public List<Room> rooms { get; }
 
     public Building(string path)
     {
@@ -94,52 +95,87 @@ public class Room
         interactables = _interactables;
     }
 
-    public Item GetItem(int xPos, int yPos)
+    //Finding things
+    public bool FindItem(int xPos, int yPos)
     {
+        Item discard;
+        return FindItem(xPos, yPos, out discard);
+    }
+    public bool FindItem(int xPos, int yPos, out Item itemFound)
+    {
+        itemFound = new Item();
         foreach (Item item in items)
         {
             if (item.xPos == xPos && item.yPos == yPos)
             {
-                return item;
+                itemFound = item;
+                return true;
             }
         }
-        return null;
+        return false;
     }
 
-    public Item GetItem(string name)
+    public bool FindItem(string name)
     {
+        Item discard;
+        return FindItem(name, out discard);
+    }
+    public bool FindItem(string name, out Item itemFound)
+    {
+        itemFound = new Item();
         foreach (Item item in items)
         {
             if (item.name == name)
             {
-                return item;
+                itemFound = item;
+                return true;
             }
         }
-        return null;
+        return false;
     }
 
-    public Interactable GetInteractable(int xPos, int yPos)
+    public bool FindInteractable(int xPos, int yPos)
     {
+        Interactable interactable;
+        return FindInteractable(xPos, yPos, out interactable);
+    }
+    public bool FindInteractable(int xPos, int yPos, out Interactable interactableFound)
+    {
+        interactableFound = new Interactable();
         foreach (Interactable interactable in interactables)
         {
             if (interactable.xPos == xPos && interactable.yPos == yPos)
             {
-                return interactable;
+                interactableFound = interactable;
+                return true;
             }
         }
-        return null;
+        return false;
     }
 
-    public Interactable GetInteractable(string name)
+    public bool FindInteractable(string name)
     {
+        Interactable interactable;
+        return FindInteractable(name, out interactable);
+    }
+    public bool FindInteractable(string name, out Interactable interactableFound)
+    {
+        interactableFound = new Interactable();
         foreach (Interactable interactable in interactables)
         {
             if (interactable.name == name)
             {
-                return interactable;
+                interactableFound = interactable;
+                return true;
             }
         }
-        return null;
+        return false;
+    }
+
+    //Get room size in vector2
+    public Vector2 GetSizeInVector2()
+    {
+        return new Vector2(width, height);
     }
 }
 
@@ -149,6 +185,14 @@ public class Interactable
     public int id { get; }
     public int xPos { get; }
     public int yPos { get; }
+
+    public Interactable()
+    {
+        name = "Default";
+        id = -1;
+        xPos = 0;
+        yPos = 0;
+    }
 
     public Interactable(string _name, int _id, int _xPos, int _yPos)
     {
@@ -160,7 +204,14 @@ public class Interactable
 
     public void Interact()
     {
+        switch (id)
+        {
+            case 0:
 
+                break;
+            default:
+                break;
+        }
     }
 }
 
@@ -171,6 +222,15 @@ public class Item
     public int id { get; }
     public int xPos { get; }
     public int yPos { get; }
+
+    public Item()
+    {
+        name = "Default";
+        description = "Default";
+        id = -1;
+        xPos = 0;
+        yPos = 0;
+    }
 
     public Item(string _name, string _description, int _id, int _xPos, int _yPos)
     {
