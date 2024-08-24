@@ -238,20 +238,30 @@ public class Interactable
     [JsonProperty("yPos")]
     int yPos { get; set; }
 
+    [JsonProperty("textColor")]
+    Color textColor { get; set; }
+
+    [JsonProperty("textString")]
+    string textString { get; set; }
+
     public Interactable()
     {
         name = "Default";
         id = -1;
         xPos = 0;
         yPos = 0;
+        textColor = Color.Yellow;
+        textString = "D";
     }
 
-    public Interactable(string _name, int _id, int _xPos, int _yPos)
+    public Interactable(string _name, int _id, int _xPos, int _yPos, Color _textColor, string _textString)
     {
         name = _name;
         id = _id;
         xPos = _xPos;
         yPos = _yPos;
+        textColor = _textColor;
+        textString = _textString;
     }
 
     public Vector2 GetPosition()
@@ -267,6 +277,16 @@ public class Interactable
     public int GetID()
     {
         return id;
+    }
+
+    public Color GetColor() 
+    {
+        return textColor; 
+    }
+
+    public string GetTextString()
+    {
+        return textString;
     }
 }
 
@@ -288,6 +308,12 @@ public class Item
     [JsonProperty("yPos")]
     public int yPos { get; set; }
 
+    [JsonProperty("textColor")]
+    Color textColor { get; set; }
+
+    [JsonProperty("textString")]
+    string textString { get; set; }
+
     public Item()
     {
         name = "Default";
@@ -295,15 +321,19 @@ public class Item
         id = -1;
         xPos = 0;
         yPos = 0;
+        textColor = Color.White;
+        textString = "d";
     }
 
-    public Item(string _name, string _description, int _id, int _xPos, int _yPos)
+    public Item(string _name, string _description, int _id, int _xPos, int _yPos, Color _textColor, string _textString)
     {
         name = _name;
         description = _description;
         id = _id;
         xPos = _xPos;
         yPos = _yPos;
+        textColor = _textColor;
+        textString = _textString;
     }
 
     public string GetName()
@@ -314,5 +344,15 @@ public class Item
     public int GetID()
     {
         return id;
+    }
+
+    public Color GetColor()
+    {
+        return textColor;
+    }
+
+    public string GetTextString()
+    {
+        return textString;
     }
 }

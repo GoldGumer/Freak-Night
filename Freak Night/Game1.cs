@@ -14,6 +14,18 @@ namespace Freak_Night
         MapScene
     }
 
+    struct DisplayText
+    {
+        public Color color;
+        public string text;
+
+        public DisplayText(Color _color, string _text)
+        {
+            color = _color;
+            text = _text;
+        }
+    }
+
     public class Game1 : Game
     {
         private GraphicsDeviceManager _graphics;
@@ -42,6 +54,8 @@ namespace Freak_Night
         int verticalDivider;
         string defaultBackground;
         bool isEditing;
+        string sideAreaText;
+        string inputAreaText;
 
         //Player
         Vector2 playerRoomPosition;
@@ -76,7 +90,7 @@ namespace Freak_Night
             _graphics.ApplyChanges();
 
             horizontalDivider = 46;
-            verticalDivider = 18;
+            verticalDivider = 22;
             centrePoint = new Vector2(horizontalDivider / 2, verticalDivider / 2);
             defaultBackground = " ";
 
@@ -147,14 +161,12 @@ namespace Freak_Night
             base.Draw(gameTime);
         }
 
-        private Vector2 CentreMap(Room currentRoom, Vector2 position)
+        private void TextInputHandler(object sender, TextInputEventArgs args)
         {
-            return position - (currentRoom.GetRoomSize() / 2);
-        }
+            var pressedKey = args.Key;
+            var character = args.Character;
 
-        private Vector2 VectorTimesText(Vector2 vector2)
-        {
-            return new Vector2(vector2.X * fontWidth, vector2.Y * fontHeight);
+            inputAreaText += character.ToString();
         }
 
         private bool IsKeyPressed(Keys key)
@@ -203,7 +215,7 @@ namespace Freak_Night
                 isEditing = false;
             }
 
-            if (IsKeyPressed(Keys.M))
+            if (IsKeyPressed(Keys.M) && currentKeyboard.IsKeyDown(Keys.RightAlt))
             {
                 if (currentScene == GameScene.RoomScene)
                 {
@@ -218,6 +230,8 @@ namespace Freak_Night
             if (currentScene == GameScene.RoomScene)
             {
                 playerRoomPosition += direction;
+
+
             }
             else if (currentScene == GameScene.MapScene)
             {
@@ -242,7 +256,7 @@ namespace Freak_Night
                 (IsKeyPressed(Keys.Down) ? 1 : 0) -
                 (IsKeyPressed(Keys.Up) ? 1 : 0));
 
-            if (IsKeyPressed(Keys.M))
+            if ((currentKeyboard.IsKeyDown(Keys.LeftShift) || currentKeyboard.IsKeyDown(Keys.RightShift)) && IsKeyPressed(Keys.M))
             {
                 if (currentScene == GameScene.RoomScene)
                 {
@@ -254,28 +268,15 @@ namespace Freak_Night
                 }
             }
 
-            if (currentScene == GameScene.RoomScene)
-            {
-                playerRoomPosition += direction;
-            }
-            else if (currentScene == GameScene.MapScene)
-            {
-                playerMapPosition += direction;
-            }
-
             Room currentRoom = building.GetRoomByID(roomID);
 
             Interactable interactable;
-            if (currentRoom.FindInteractable(playerRoomPosition, out interactable))
+            if (currentRoom.FindInteractable(playerRoomPosition + direction, out interactable))
             {
-                if (interactable.GetID() < 4)
-                {
-                }
-
                 switch (interactable.GetID())
                 {
                     case 0:
-                        roomID = currentRoom.GetConnectedRooms()[0];                        
+                        roomID = currentRoom.GetConnectedRooms()[0];
                         if (building.GetRoomByID(roomID).FindInteractable("SouthDoor", out interactable))
                         {
                             playerRoomPosition = interactable.GetPosition() + new Vector2(0, -1);
@@ -308,8 +309,23 @@ namespace Freak_Night
                         break;
                 }
             }
-        }
 
+            if (currentScene == GameScene.RoomScene)
+            {
+                if ((playerRoomPosition + direction).X < currentRoom.GetRoomSize().X &&
+                    (playerRoomPosition + direction).X > 0 &&
+                    (playerRoomPosition + direction).Y < currentRoom.GetRoomSize().Y &&
+                    (playerRoomPosition + direction).Y > 0
+                    )
+                {
+                    playerRoomPosition += direction;
+                }
+            }
+            else if (currentScene == GameScene.MapScene)
+            {
+                playerMapPosition += direction;
+            }
+        }
 
         //Display Options
 
@@ -319,7 +335,7 @@ namespace Freak_Night
 
 
             _spriteBatch.Begin();
-            DisplayMapText(new Vector2(0.0f, -15.0f));
+            Display(new Vector2(0.0f, -15.0f));
             _spriteBatch.End();
         }
 
@@ -329,20 +345,13 @@ namespace Freak_Night
 
 
             _spriteBatch.Begin();
-            roomPosition = CentreMap(building.GetRoomByID(roomID), centrePoint);
-            DisplayRoomText(new Vector2(0.0f, -15.0f));
+            roomPosition = centrePoint - (building.GetRoomByID(roomID).GetRoomSize() / 2);
+            Display(new Vector2(0.0f, -15.0f));
             _spriteBatch.End();
         }
 
-        private void DisplayMapText()
+        private void Display(Vector2 offset)
         {
-            DisplayMapText(Vector2.Zero);
-        }
-
-        private void DisplayMapText(Vector2 offset)
-        {
-            List<Room> rooms = building.GetRooms();
-
             int upperVertical = (screenHeight / fontHeight) - 1;
             int upperHorizontal = (screenWidth / fontWidth);
 
@@ -350,136 +359,111 @@ namespace Freak_Night
             {
                 for (int j = 0; j < upperHorizontal; j++)
                 {
-                    Vector2 textPosition = VectorTimesText(new Vector2(j, i)) + offset;
-                    Color textColor = Color.White;
-                    string textString = defaultBackground;
+                    Vector2 textPosition = new Vector2(j * fontWidth, i * fontHeight) + offset;
+                    DisplayText displayText = new DisplayText(Color.White, defaultBackground);
 
-                    if (rooms.Count > 0)
+                    if (currentScene == GameScene.MapScene)
                     {
-                        foreach (Room room in rooms)
-                        {
-                            if (room.GetIsExplored() && (centrePoint + room.GetPosition()) == new Vector2(j,i))
-                            {
-                                textColor = roomColor;
-                                textString = "o";
-                            }
-                        }
+                        displayText = DisplayMapText(i, j, displayText);
+                    }
+                    else if (currentScene == GameScene.RoomScene)
+                    {
+                        displayText = DisplayRoomText(i, j, displayText);
                     }
 
-                    if (i >= verticalDivider)
-                    {
-                        textColor = UIColor;
-                        textString = " ";
 
-                        if (i == verticalDivider)
-                        {
-                            textColor = UIColor;
-                            textString = "-";
-                        }
-                    }
-                    else if (j >= horizontalDivider)
-                    {
-                        textColor = UIColor;
-                        textString = " ";
+                    displayText = DisplayUIText(i, j, displayText);
 
-                        if (j == horizontalDivider)
-                        {
-                            textColor = UIColor;
-                            textString = "|";
-                        }
-                    }
+                    displayText = DisplayPlayerText(i, j, displayText);
 
-                    if (playerMapPosition == new Vector2(j, i))
-                    {
-                        textColor = playerColor;
-                        textString = "@";
-                    }
-
-                    _spriteBatch.DrawString(font, textString, textPosition, textColor);
+                    _spriteBatch.DrawString(font, displayText.text, textPosition, displayText.color);
                 }
             }
         }
 
-        private void DisplayRoomText()
+        private DisplayText DisplayUIText(int i, int j, DisplayText displayText)
         {
-            DisplayRoomText(Vector2.Zero);
+            if (i >= verticalDivider)
+            {
+                displayText = new DisplayText(UIColor, " ");
+
+                if (i == verticalDivider)
+                {
+                    displayText = new DisplayText(UIColor, "-");
+                }
+            }
+            else if (j >= horizontalDivider)
+            {
+                displayText = new DisplayText(UIColor, " ");
+
+                if (j == horizontalDivider)
+                {
+                    displayText = new DisplayText(UIColor, "|");
+                }
+            }
+
+            return displayText;
         }
 
-        private void DisplayRoomText(Vector2 offset)
+        private DisplayText DisplayMapText(int i, int j, DisplayText displayText)
+        {
+            List<Room> rooms = building.GetRooms();
+
+            if (rooms.Count > 0)
+            {
+                foreach (Room room in rooms)
+                {
+                    if (room.GetIsExplored() && (centrePoint + (room.GetPosition() * 2)) == new Vector2(j, i))
+                    {
+                        displayText = new DisplayText(roomColor, "o");
+                    }
+                }
+            }
+
+            return displayText;
+        }
+
+        private DisplayText DisplayPlayerText(int i, int j, DisplayText displayText)
+        {
+            if ((currentScene == GameScene.MapScene && playerMapPosition == new Vector2(j, i)) ||
+                (currentScene == GameScene.RoomScene && playerRoomPosition == new Vector2(j - (int)(roomPosition.X), i - (int)(roomPosition.Y))))
+            {
+                displayText = new DisplayText(playerColor, "@");
+            }
+
+            return displayText;
+        }
+
+        private DisplayText DisplayRoomText(int i, int j, DisplayText displayText)
         {
             Room currentRoom = building.GetRoomByID(roomID);
 
-            int upperVertical = (screenHeight / fontHeight) - 1;
-            int upperHorizontal = (screenWidth / fontWidth);
-
-            for (int i = 0; i < upperVertical; i++) 
+            if (roomPosition.Y <= i && (roomPosition.Y + currentRoom.GetRoomSize().Y) >= i && roomPosition.X <= j && (roomPosition.X + currentRoom.GetRoomSize().X) >= j)
             {
-                for(int j = 0; j < upperHorizontal; j++)
+                displayText = new DisplayText(roomColor, ".");
+                if (i == roomPosition.Y || i == (roomPosition.Y + currentRoom.GetRoomSize().Y))
                 {
-                    Vector2 textPosition = VectorTimesText(new Vector2(j, i)) + offset;
-                    Color textColor = Color.White;
-                    string textString = defaultBackground;
+                    displayText.text = "=";
+                }
+                else if (j == roomPosition.X || j == (roomPosition.X + currentRoom.GetRoomSize().X))
+                {
+                    displayText.text = "H";
+                }
 
-                    if (roomPosition.Y <= i && (roomPosition.Y + currentRoom.GetRoomSize().Y) >= i && roomPosition.X <= j && (roomPosition.X + currentRoom.GetRoomSize().X) >= j)
-                    {
-                        textColor = roomColor;
-                        textString = ".";
-                        if (i == roomPosition.Y || i == (roomPosition.Y + currentRoom.GetRoomSize().Y))
-                        {
-                            textString = "=";
-                        }
-                        else if (j == roomPosition.X || j == (roomPosition.X + currentRoom.GetRoomSize().X))
-                        {
-                            textString = "H";
-                        }
+                Item item;
+                if (currentRoom.GetItemCount() > 0 && currentRoom.FindItem(j - (int)(roomPosition.X), i - (int)(roomPosition.Y), out item))
+                {
+                    displayText = new DisplayText(item.GetColor(), item.GetTextString());
+                }
 
-                        Item item;
-                        if (currentRoom.GetItemCount() > 0 && currentRoom.FindItem(j - (int)(roomPosition.X), i - (int)(roomPosition.Y), out item))
-                        {
-                            textColor = itemColor;
-                            textString = "i";
-                        }
-
-                        Interactable interactable;
-                        if (currentRoom.GetInteractableCount() > 0 && currentRoom.FindInteractable(j - (int)(roomPosition.X), i - (int)(roomPosition.Y), out interactable))
-                        {
-                            textColor = interactableColor;
-                            textString = "#";
-                        }
-                    }
-
-                    if (i >= verticalDivider)
-                    {
-                        textColor = UIColor;
-                        textString = " ";
-
-                        if (i == verticalDivider)
-                        {
-                            textColor = UIColor;
-                            textString = "-";
-                        }
-                    }
-                    else if (j >= horizontalDivider)
-                    {
-                        textColor = UIColor;
-                        textString = " ";
-
-                        if (j == horizontalDivider)
-                        {
-                            textColor = UIColor;
-                            textString = "|";
-                        }
-                    }
-
-                    if (playerRoomPosition == new Vector2(j - (int)(roomPosition.X), i - (int)(roomPosition.Y)))
-                    {
-                        textColor = playerColor;
-                        textString = "@";
-                    }
-
-                    _spriteBatch.DrawString(font, textString, textPosition, textColor);
+                Interactable interactable;
+                if (currentRoom.GetInteractableCount() > 0 && currentRoom.FindInteractable(j - (int)(roomPosition.X), i - (int)(roomPosition.Y), out interactable))
+                {
+                    displayText = new DisplayText(interactable.GetColor(), interactable.GetTextString());
                 }
             }
+
+            return displayText;
         }
     }
 }
