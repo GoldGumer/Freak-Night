@@ -10,8 +10,8 @@ namespace Freak_Night
     enum GameScene
     {
         MainMenuScene,
-        GameplayScene,
-        EditScene
+        RoomScene,
+        MapScene
     }
 
     public class Game1 : Game
@@ -20,11 +20,11 @@ namespace Freak_Night
         private SpriteBatch _spriteBatch;
 
         //Screen
-        int screenHeight = 1080;
-        int screenWidth = 1920;
+        int screenHeight;
+        int screenWidth;
 
         //Scene
-        GameScene currentScene = GameScene.GameplayScene;
+        GameScene currentScene = GameScene.RoomScene;
 
         //Font
         SpriteFont font;
@@ -35,16 +35,17 @@ namespace Freak_Night
         KeyboardState previousKeyboard;
         KeyboardState currentKeyboard;
 
-        //Gameplay Display
-        Vector2 centrePoint = new Vector2(23,9);
-        int horizontalDivider = 46;
-        int verticalDivider = 18;
-
-        //Displaying Room
+        //Display
         Vector2 roomPosition;
+        Vector2 centrePoint;
+        int horizontalDivider;
+        int verticalDivider;
+        string defaultBackground;
+        bool isEditing;
 
         //Player
-        Vector2 playerPosition = Vector2.One;
+        Vector2 playerRoomPosition;
+        Vector2 playerMapPosition;
 
         //Building
         Building building;
@@ -67,11 +68,24 @@ namespace Freak_Night
 
         protected override void Initialize()
         {
+            screenHeight = 1080;
+            screenWidth = 1920;
+
             _graphics.PreferredBackBufferHeight = screenHeight;
             _graphics.PreferredBackBufferWidth = screenWidth;
             _graphics.ApplyChanges();
 
+            horizontalDivider = 46;
+            verticalDivider = 18;
+            centrePoint = new Vector2(horizontalDivider / 2, verticalDivider / 2);
+            defaultBackground = " ";
+
+            isEditing = false;
+
             roomID = 0;
+
+            playerRoomPosition = Vector2.One;
+            playerMapPosition = centrePoint;
 
             base.Initialize();
         }
@@ -87,6 +101,8 @@ namespace Freak_Night
             string path = Path.Combine(Content.RootDirectory, "ExampleBuilding.json");
 
             building = new Building(path);
+
+            playerRoomPosition = building.GetRoomByID(roomID).GetRoomSize() / 2;
         }
 
         protected override void Update(GameTime gameTime)
@@ -101,11 +117,11 @@ namespace Freak_Night
             {
                 MainMenuUpdate();
             }
-            else if (currentScene == GameScene.GameplayScene)
+            else if (!isEditing)
             {
                 GameplayUpdate();
             }
-            else if (currentScene == GameScene.EditScene)
+            else if (isEditing)
             {
                 EditModeUpdate();
             }
@@ -119,13 +135,13 @@ namespace Freak_Night
             {
                 MainMenuDraw();
             }
-            else if (currentScene == GameScene.GameplayScene)
+            else if (currentScene == GameScene.RoomScene)
             {
-                GameplayDraw();
+                RoomDraw();
             }
-            else if (currentScene == GameScene.EditScene)
+            else if (currentScene == GameScene.MapScene)
             { 
-                EditModeDraw();
+                MapDraw();
             }
 
             base.Draw(gameTime);
@@ -159,6 +175,7 @@ namespace Freak_Night
         {
 
         }
+
         private void MainMenuDraw()
         {
             GraphicsDevice.Clear(Color.Black);
@@ -182,56 +199,29 @@ namespace Freak_Night
 
             if (currentKeyboard.IsKeyDown(Keys.LeftControl) && currentKeyboard.IsKeyDown(Keys.RightAlt) && currentKeyboard.IsKeyDown(Keys.G))
             {
-                playerPosition = Vector2.One;
-                currentScene = GameScene.GameplayScene;
+                defaultBackground = " ";
+                isEditing = false;
             }
-        }
-        private void EditModeDraw()
-        {
-            GraphicsDevice.Clear(Color.Black);
 
-
-            _spriteBatch.Begin();
-            DisplayEditText(new Vector2(0.0f, -15.0f));
-            _spriteBatch.End();
-        }
-
-        private void DisplayEditText()
-        {
-            DisplayEditText(Vector2.Zero);
-        }
-
-        private void DisplayEditText(Vector2 offset)
-        {
-            List<Room> rooms = new List<Room>();
-
-            bool isInsideRoom = false;
-
-            int upperVertical = (screenHeight / fontHeight) - 1;
-            int upperHorizontal = (screenWidth / fontWidth);
-
-            for (int i = 0; i < upperVertical; i++)
+            if (IsKeyPressed(Keys.M))
             {
-                for (int j = 0; j < upperHorizontal; j++)
+                if (currentScene == GameScene.RoomScene)
                 {
-                    Vector2 textPosition = VectorTimesText(new Vector2(j, i)) + offset;
-                    Color textColor = Color.DarkGray;
-                    string textString = ".";
-
-                    if (isInsideRoom)
-                    {
-
-                    }
-                    else
-                    {
-                        if (rooms.Count > 0)
-                        {
-
-                        }
-                    }
-
-                    _spriteBatch.DrawString(font, textString, textPosition, textColor);
+                    currentScene = GameScene.MapScene;
                 }
+                else if (currentScene == GameScene.MapScene)
+                {
+                    currentScene = GameScene.RoomScene;
+                }
+            }
+
+            if (currentScene == GameScene.RoomScene)
+            {
+                playerRoomPosition += direction;
+            }
+            else if (currentScene == GameScene.MapScene)
+            {
+                playerMapPosition += direction;
             }
         }
 
@@ -242,8 +232,8 @@ namespace Freak_Night
         {
             if (currentKeyboard.IsKeyDown(Keys.LeftControl) && currentKeyboard.IsKeyDown(Keys.RightAlt) && currentKeyboard.IsKeyDown(Keys.E))
             {
-                playerPosition = new Vector2((screenWidth / fontWidth) / 2, (screenHeight / fontHeight) / 2);
-                currentScene = GameScene.EditScene;
+                defaultBackground = ".";
+                isEditing = true;
             }
 
             Vector2 direction = new Vector2(
@@ -252,12 +242,31 @@ namespace Freak_Night
                 (IsKeyPressed(Keys.Down) ? 1 : 0) -
                 (IsKeyPressed(Keys.Up) ? 1 : 0));
 
-            playerPosition += direction;
+            if (IsKeyPressed(Keys.M))
+            {
+                if (currentScene == GameScene.RoomScene)
+                {
+                    currentScene = GameScene.MapScene;
+                }
+                else if (currentScene == GameScene.MapScene)
+                {
+                    currentScene = GameScene.RoomScene;
+                }
+            }
+
+            if (currentScene == GameScene.RoomScene)
+            {
+                playerRoomPosition += direction;
+            }
+            else if (currentScene == GameScene.MapScene)
+            {
+                playerMapPosition += direction;
+            }
 
             Room currentRoom = building.GetRoomByID(roomID);
 
             Interactable interactable;
-            if (currentRoom.FindInteractable(playerPosition, out interactable))
+            if (currentRoom.FindInteractable(playerRoomPosition, out interactable))
             {
                 if (interactable.GetID() < 4)
                 {
@@ -269,28 +278,28 @@ namespace Freak_Night
                         roomID = currentRoom.GetConnectedRooms()[0];                        
                         if (building.GetRoomByID(roomID).FindInteractable("SouthDoor", out interactable))
                         {
-                            playerPosition = interactable.GetPosition() + new Vector2(0, -1);
+                            playerRoomPosition = interactable.GetPosition() + new Vector2(0, -1);
                         }
                         break;
                     case 1:
                         roomID = currentRoom.GetConnectedRooms()[1];
                         if (building.GetRoomByID(roomID).FindInteractable("WestDoor", out interactable))
                         {
-                            playerPosition = interactable.GetPosition() + new Vector2(1, 0);
+                            playerRoomPosition = interactable.GetPosition() + new Vector2(1, 0);
                         }
                         break;
                     case 2:
                         roomID = currentRoom.GetConnectedRooms()[2];
                         if (building.GetRoomByID(roomID).FindInteractable("NorthDoor", out interactable))
                         {
-                            playerPosition = interactable.GetPosition() + new Vector2(0, 1);
+                            playerRoomPosition = interactable.GetPosition() + new Vector2(0, 1);
                         }
                         break;
                     case 3:
                         roomID = currentRoom.GetConnectedRooms()[3];
                         if (building.GetRoomByID(roomID).FindInteractable("EastDoor", out interactable))
                         {
-                            playerPosition = interactable.GetPosition() + new Vector2(-1, 0);
+                            playerRoomPosition = interactable.GetPosition() + new Vector2(-1, 0);
                         }
                         break;
                     case 4:
@@ -300,23 +309,103 @@ namespace Freak_Night
                 }
             }
         }
-        private void GameplayDraw()
+
+
+        //Display Options
+
+        private void MapDraw()
+        {
+            GraphicsDevice.Clear(Color.Black);
+
+
+            _spriteBatch.Begin();
+            DisplayMapText(new Vector2(0.0f, -15.0f));
+            _spriteBatch.End();
+        }
+
+        private void RoomDraw()
         {
             GraphicsDevice.Clear(Color.Black);
 
 
             _spriteBatch.Begin();
             roomPosition = CentreMap(building.GetRoomByID(roomID), centrePoint);
-            DisplayGameText(new Vector2(0.0f, -15.0f));
+            DisplayRoomText(new Vector2(0.0f, -15.0f));
             _spriteBatch.End();
         }
 
-        private void DisplayGameText()
+        private void DisplayMapText()
         {
-            DisplayGameText(Vector2.Zero);
+            DisplayMapText(Vector2.Zero);
         }
 
-        private void DisplayGameText(Vector2 offset)
+        private void DisplayMapText(Vector2 offset)
+        {
+            List<Room> rooms = building.GetRooms();
+
+            int upperVertical = (screenHeight / fontHeight) - 1;
+            int upperHorizontal = (screenWidth / fontWidth);
+
+            for (int i = 0; i < upperVertical; i++)
+            {
+                for (int j = 0; j < upperHorizontal; j++)
+                {
+                    Vector2 textPosition = VectorTimesText(new Vector2(j, i)) + offset;
+                    Color textColor = Color.White;
+                    string textString = defaultBackground;
+
+                    if (rooms.Count > 0)
+                    {
+                        foreach (Room room in rooms)
+                        {
+                            if (room.GetIsExplored() && (centrePoint + room.GetPosition()) == new Vector2(j,i))
+                            {
+                                textColor = roomColor;
+                                textString = "o";
+                            }
+                        }
+                    }
+
+                    if (i >= verticalDivider)
+                    {
+                        textColor = UIColor;
+                        textString = " ";
+
+                        if (i == verticalDivider)
+                        {
+                            textColor = UIColor;
+                            textString = "-";
+                        }
+                    }
+                    else if (j >= horizontalDivider)
+                    {
+                        textColor = UIColor;
+                        textString = " ";
+
+                        if (j == horizontalDivider)
+                        {
+                            textColor = UIColor;
+                            textString = "|";
+                        }
+                    }
+
+                    if (playerMapPosition == new Vector2(j, i))
+                    {
+                        textColor = playerColor;
+                        textString = "@";
+                    }
+
+                    _spriteBatch.DrawString(font, textString, textPosition, textColor);
+                }
+            }
+        }
+
+        private void DisplayRoomText()
+        {
+            DisplayRoomText(Vector2.Zero);
+        }
+
+        private void DisplayRoomText(Vector2 offset)
         {
             Room currentRoom = building.GetRoomByID(roomID);
 
@@ -329,7 +418,7 @@ namespace Freak_Night
                 {
                     Vector2 textPosition = VectorTimesText(new Vector2(j, i)) + offset;
                     Color textColor = Color.White;
-                    string textString = " ";
+                    string textString = defaultBackground;
 
                     if (roomPosition.Y <= i && (roomPosition.Y + currentRoom.GetRoomSize().Y) >= i && roomPosition.X <= j && (roomPosition.X + currentRoom.GetRoomSize().X) >= j)
                     {
@@ -361,20 +450,20 @@ namespace Freak_Night
 
                     if (i >= verticalDivider)
                     {
+                        textColor = UIColor;
+                        textString = " ";
 
-                        if (i == verticalDivider || i != (upperVertical - 1))
+                        if (i == verticalDivider)
                         {
                             textColor = UIColor;
                             textString = "-";
                         }
-                        else if (i == (upperVertical - 1) && j == 0)
-                        {
-                            textColor= UIColor;
-                            textString = "User Input";
-                        }
                     }
                     else if (j >= horizontalDivider)
                     {
+                        textColor = UIColor;
+                        textString = " ";
+
                         if (j == horizontalDivider)
                         {
                             textColor = UIColor;
@@ -382,7 +471,7 @@ namespace Freak_Night
                         }
                     }
 
-                    if (playerPosition == new Vector2(j - (int)(roomPosition.X), i - (int)(roomPosition.Y)))
+                    if (playerRoomPosition == new Vector2(j - (int)(roomPosition.X), i - (int)(roomPosition.Y)))
                     {
                         textColor = playerColor;
                         textString = "@";

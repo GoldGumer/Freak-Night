@@ -41,6 +41,11 @@ public class Building
         return rooms.Count;
     }
 
+    public List<Room> GetRooms()
+    {
+        return rooms;
+    }
+
     public Room GetRoomByID(int id)
     {
         foreach (Room room in rooms)
@@ -63,34 +68,37 @@ public class Room
     [JsonProperty("id")]
     int id { get; set; }
 
-    [JsonProperty("north")]
-    int northRoom { get; set; }
+    [JsonProperty("connectedRooms")]
+    int[] connectedRooms { get; set; }
 
-    [JsonProperty("east")]
-    int eastRoom { get; set; }
+    [JsonProperty("xPos")]
+    int xPos { get; set; }
 
-    [JsonProperty("south")]
-    int southRoom { get; set; }
-
-    [JsonProperty("west")]
-    int westRoom { get; set; }
+    [JsonProperty("yPos")]
+    int yPos { get; set; }
 
     [JsonProperty("width")]
     int width { get; set; }
     
     [JsonProperty("height")]
     int height { get; set; }
-    
+
+    [JsonProperty("isExplored")]
+    bool isExplored { get; set; }
+
     [JsonProperty("items")]
     List<Item> items { get; set; }
     
     [JsonProperty("interactables")]
     List<Interactable> interactables { get; set; }
 
-    public Room(string _name, int _id, int _width, int _height, List<Item> _items, List<Interactable> _interactables)
+    public Room(string _name, int _id, int[] _connectedRooms, int _xPos, int _yPos, int _width, int _height, List<Item> _items, List<Interactable> _interactables)
     {
         name = _name;
         id = _id;
+        connectedRooms = _connectedRooms;
+        xPos = _xPos;
+        yPos = _yPos;
         width = _width;
         height = _height;
         items = _items;
@@ -100,6 +108,14 @@ public class Room
     public int GetRoomID()
     {
         return id;
+    }
+    public bool GetIsExplored() 
+    {  
+        return isExplored; 
+    }
+    public Vector2 GetPosition()
+    {
+        return new Vector2(xPos, yPos);
     }
     public int GetItemCount()
     {
@@ -116,7 +132,7 @@ public class Room
 
     public int[] GetConnectedRooms()
     {
-        return new int[] { northRoom, eastRoom, southRoom, westRoom };
+        return connectedRooms;
     }
 
     //Finding things
