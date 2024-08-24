@@ -1,21 +1,44 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Numerics;
 
 public class Building
 {
-    public List<Room> rooms { get; }
+    private List<Room> rooms { get; set; }
+
+    public Building(List<Room> _rooms)
+    {
+        rooms = _rooms;
+    }
 
     public Building(string path)
+    {
+        JSONToBuilding(path);
+    }
+
+    public void BuildingToJSON(string path)
+    {
+        using (StreamWriter file = File.CreateText(path))
+        {
+            JsonSerializer serializer = new JsonSerializer();
+            serializer.Serialize(file, rooms);
+        }
+    }
+
+    public void JSONToBuilding(string path)
     {
         using (StreamReader sr = new StreamReader(path))
         {
             string json = sr.ReadToEnd();
-            rooms = JsonConvert.DeserializeObject<Building>(json).rooms;
+            rooms = JsonConvert.DeserializeObject<List<Room>>(json);
         }
+    }
+
+    public int GetRoomsCount()
+    {
+        return rooms.Count;
     }
 
     public Room GetRoomByID(int id)
@@ -35,22 +58,22 @@ public class Building
 public class Room
 {
     [JsonProperty("name")]
-    public string name { get; }
+    public string name { get; set; }
     
     [JsonProperty("id")]
-    public int id { get; }
+    public int id { get; set; }
 
     [JsonProperty("width")]
-    public int width { get; }
+    public int width { get; set; }
     
     [JsonProperty("height")]
-    public int height { get; }
+    public int height { get; set; }
     
     [JsonProperty("items")]
-    public List<Item> items { get; }
+    public List<Item> items { get; set; }
     
     [JsonProperty("interactables")]
-    public List<Interactable> interactables { get; }
+    public List<Interactable> interactables { get; set; }
 
     public Room(string _name, int _id, int _width, int _height, List<Item> _items, List<Interactable> _interactables)
     {
@@ -150,16 +173,16 @@ public class Room
 public class Interactable
 {
     [JsonProperty("name")]
-    public string name { get; }
+    public string name { get; set; }
 
     [JsonProperty("id")]
-    public int id { get; }
+    public int id { get; set; }
 
     [JsonProperty("xPos")]
-    public int xPos { get; }
+    public int xPos { get; set; }
 
     [JsonProperty("yPos")]
-    public int yPos { get; }
+    public int yPos { get; set; }
 
     public Interactable()
     {
@@ -194,19 +217,19 @@ public class Interactable
 public class Item
 {
     [JsonProperty("name")]
-    public string name { get; }
+    public string name { get; set; }
     
     [JsonProperty("description")]
-    public string description { get; }
+    public string description { get; set; }
 
     [JsonProperty("id")]
-    public int id { get; }
+    public int id { get; set; }
 
     [JsonProperty("xPos")]
-    public int xPos { get; }
+    public int xPos { get; set; }
 
     [JsonProperty("yPos")]
-    public int yPos { get; }
+    public int yPos { get; set; }
 
     public Item()
     {

@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace Freak_Night
@@ -57,7 +58,11 @@ namespace Freak_Night
 
             font = Content.Load<SpriteFont>("IBM Plex Mono Light");
 
-            building = new Building(Path.Combine(Content.RootDirectory, "ExampleBuilding.json"));
+            //Building Creation
+
+            string path = Path.Combine(Content.RootDirectory, "ExampleBuilding.json");
+
+            building = new Building(path);
         }
 
         protected override void Update(GameTime gameTime)
@@ -68,9 +73,9 @@ namespace Freak_Night
             if (Keyboard.GetState().IsKeyDown(Keys.Up))
             {
                 roomID++;
-                if (roomID >= building.rooms.Count)
+                if (roomID >= building.GetRoomsCount())
                 {
-                    roomID = building.rooms.Count - 1;
+                    roomID = building.GetRoomsCount() - 1;
                 }
             }
 
@@ -128,15 +133,15 @@ namespace Freak_Night
                     Color textColor = Color.White;
                     string textString = " ";
 
-                    if ((roomPosition.Y - 1) <= i && (roomPosition.Y + currentRoom.height) >= i && (roomPosition.X - 1) <= j && (roomPosition.X + currentRoom.width) >= j)
+                    if (roomPosition.Y <= i && (roomPosition.Y + currentRoom.height) >= i && roomPosition.X <= j && (roomPosition.X + currentRoom.width) >= j)
                     {
                         textColor = roomColor;
                         textString = ".";
-                        if (i == (roomPosition.Y - 1) || i == (roomPosition.Y + currentRoom.height))
+                        if (i == roomPosition.Y || i == (roomPosition.Y + currentRoom.height))
                         {
                             textString = "=";
                         }
-                        else if (j == (roomPosition.X - 1) || j == (roomPosition.X + currentRoom.width))
+                        else if (j == roomPosition.X || j == (roomPosition.X + currentRoom.width))
                         {
                             textString = "H";
                         }
