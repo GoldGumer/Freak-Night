@@ -13,9 +13,6 @@
 
 #---------------------------------- Content ---------------------------------#
 
-#begin ExampleBuilding.txt
-/copy:ExampleBuilding.txt
-
 #begin IBM Plex Mono Light.spritefont
 /importer:FontDescriptionImporter
 /processor:FontDescriptionProcessor

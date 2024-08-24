@@ -7,26 +7,50 @@ using System.IO;
 
 namespace Freak_Night
 {
+    enum GameScene
+    {
+        MainMenuScene,
+        GameplayScene,
+        EditScene
+    }
+
     public class Game1 : Game
     {
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
 
+        //Screen
         int screenHeight = 1080;
         int screenWidth = 1920;
 
+        //Scene
+        GameScene currentScene = GameScene.GameplayScene;
+
+        //Font
         SpriteFont font;
         const int fontHeight = 40;
         const int fontWidth = 32;
 
+        //Keyboards
+        KeyboardState previousKeyboard;
+        KeyboardState currentKeyboard;
+
+        //Gameplay Display
         Vector2 centrePoint = new Vector2(23,9);
         int horizontalDivider = 46;
         int verticalDivider = 18;
 
+        //Displaying Room
         Vector2 roomPosition;
 
+        //Player
+        Vector2 playerPosition = Vector2.One;
+
+        //Building
         Building building;
         int roomID;
+
+        //Colors
         Color roomColor = Color.Gray;
         Color itemColor = Color.White;
         Color interactableColor = Color.Yellow;
@@ -70,106 +94,298 @@ namespace Freak_Night
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
-            if (Keyboard.GetState().IsKeyDown(Keys.Up))
-            {
-                roomID++;
-                if (roomID >= building.GetRoomsCount())
-                {
-                    roomID = building.GetRoomsCount() - 1;
-                }
-            }
+            previousKeyboard = currentKeyboard;
+            currentKeyboard = Keyboard.GetState();
 
-            if (Keyboard.GetState().IsKeyDown(Keys.Down))
+            if (currentScene == GameScene.MainMenuScene)
             {
-                roomID--;
-                if (roomID <= 0)
-                {
-                    roomID = 0;
-                }
+                MainMenuUpdate();
             }
-
-            // TODO: Add your update logic here
+            else if (currentScene == GameScene.GameplayScene)
+            {
+                GameplayUpdate();
+            }
+            else if (currentScene == GameScene.EditScene)
+            {
+                EditModeUpdate();
+            }
 
             base.Update(gameTime);
         }
 
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Color.Black);
-
-            roomPosition = CentreMap(building.GetRoomByID(roomID), centrePoint);
-
-            _spriteBatch.Begin();
-            DisplayText(new Vector2(0.0f, -15.0f));
-            _spriteBatch.End();
+            if (currentScene == GameScene.MainMenuScene)
+            {
+                MainMenuDraw();
+            }
+            else if (currentScene == GameScene.GameplayScene)
+            {
+                GameplayDraw();
+            }
+            else if (currentScene == GameScene.EditScene)
+            { 
+                EditModeDraw();
+            }
 
             base.Draw(gameTime);
         }
 
-        public Vector2 CentreMap(Room currentRoom, Vector2 position)
+        private Vector2 CentreMap(Room currentRoom, Vector2 position)
         {
-            return new Vector2(position.X - (currentRoom.width / 2), position.Y - (currentRoom.height / 2));
+            return position - (currentRoom.GetRoomSize() / 2);
         }
 
-        public Vector2 VectorTimesText(Vector2 vector2)
+        private Vector2 VectorTimesText(Vector2 vector2)
         {
             return new Vector2(vector2.X * fontWidth, vector2.Y * fontHeight);
         }
 
-        public void DisplayText()
+        private bool IsKeyPressed(Keys key)
         {
-            DisplayText(Vector2.Zero);
+            if (currentKeyboard.IsKeyDown(key) && (currentKeyboard.IsKeyDown(key) ^ previousKeyboard.IsKeyDown(key)))
+            {
+                return true;
+            }
+            else 
+            {
+                return false; 
+            }
         }
 
-        public void DisplayText(Vector2 Offset)
+        //Main Menu Functions
+
+        private void MainMenuUpdate()
+        {
+
+        }
+        private void MainMenuDraw()
+        {
+            GraphicsDevice.Clear(Color.Black);
+
+
+            _spriteBatch.Begin();
+
+            _spriteBatch.End();
+        }
+
+
+        //Edit Mode Functions
+
+        private void EditModeUpdate()
+        {
+            Vector2 direction = new Vector2(
+                (IsKeyPressed(Keys.Right) ? 1 : 0) - 
+                (IsKeyPressed(Keys.Left) ? 1 : 0),
+                (IsKeyPressed(Keys.Down) ? 1 : 0) - 
+                (IsKeyPressed(Keys.Up) ? 1 : 0));
+
+            if (currentKeyboard.IsKeyDown(Keys.LeftControl) && currentKeyboard.IsKeyDown(Keys.RightAlt) && currentKeyboard.IsKeyDown(Keys.G))
+            {
+                playerPosition = Vector2.One;
+                currentScene = GameScene.GameplayScene;
+            }
+        }
+        private void EditModeDraw()
+        {
+            GraphicsDevice.Clear(Color.Black);
+
+
+            _spriteBatch.Begin();
+            DisplayEditText(new Vector2(0.0f, -15.0f));
+            _spriteBatch.End();
+        }
+
+        private void DisplayEditText()
+        {
+            DisplayEditText(Vector2.Zero);
+        }
+
+        private void DisplayEditText(Vector2 offset)
+        {
+            List<Room> rooms = new List<Room>();
+
+            bool isInsideRoom = false;
+
+            int upperVertical = (screenHeight / fontHeight) - 1;
+            int upperHorizontal = (screenWidth / fontWidth);
+
+            for (int i = 0; i < upperVertical; i++)
+            {
+                for (int j = 0; j < upperHorizontal; j++)
+                {
+                    Vector2 textPosition = VectorTimesText(new Vector2(j, i)) + offset;
+                    Color textColor = Color.DarkGray;
+                    string textString = ".";
+
+                    if (isInsideRoom)
+                    {
+
+                    }
+                    else
+                    {
+                        if (rooms.Count > 0)
+                        {
+
+                        }
+                    }
+
+                    _spriteBatch.DrawString(font, textString, textPosition, textColor);
+                }
+            }
+        }
+
+
+        //Gameplay Functions
+
+        private void GameplayUpdate()
+        {
+            if (currentKeyboard.IsKeyDown(Keys.LeftControl) && currentKeyboard.IsKeyDown(Keys.RightAlt) && currentKeyboard.IsKeyDown(Keys.E))
+            {
+                playerPosition = new Vector2((screenWidth / fontWidth) / 2, (screenHeight / fontHeight) / 2);
+                currentScene = GameScene.EditScene;
+            }
+
+            Vector2 direction = new Vector2(
+                (IsKeyPressed(Keys.Right) ? 1 : 0) -
+                (IsKeyPressed(Keys.Left) ? 1 : 0),
+                (IsKeyPressed(Keys.Down) ? 1 : 0) -
+                (IsKeyPressed(Keys.Up) ? 1 : 0));
+
+            playerPosition += direction;
+
+            Room currentRoom = building.GetRoomByID(roomID);
+
+            Interactable interactable;
+            if (currentRoom.FindInteractable(playerPosition, out interactable))
+            {
+                if (interactable.GetID() < 4)
+                {
+                }
+
+                switch (interactable.GetID())
+                {
+                    case 0:
+                        roomID = currentRoom.GetConnectedRooms()[0];                        
+                        if (building.GetRoomByID(roomID).FindInteractable("SouthDoor", out interactable))
+                        {
+                            playerPosition = interactable.GetPosition() + new Vector2(0, -1);
+                        }
+                        break;
+                    case 1:
+                        roomID = currentRoom.GetConnectedRooms()[1];
+                        if (building.GetRoomByID(roomID).FindInteractable("WestDoor", out interactable))
+                        {
+                            playerPosition = interactable.GetPosition() + new Vector2(1, 0);
+                        }
+                        break;
+                    case 2:
+                        roomID = currentRoom.GetConnectedRooms()[2];
+                        if (building.GetRoomByID(roomID).FindInteractable("NorthDoor", out interactable))
+                        {
+                            playerPosition = interactable.GetPosition() + new Vector2(0, 1);
+                        }
+                        break;
+                    case 3:
+                        roomID = currentRoom.GetConnectedRooms()[3];
+                        if (building.GetRoomByID(roomID).FindInteractable("EastDoor", out interactable))
+                        {
+                            playerPosition = interactable.GetPosition() + new Vector2(-1, 0);
+                        }
+                        break;
+                    case 4:
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+        private void GameplayDraw()
+        {
+            GraphicsDevice.Clear(Color.Black);
+
+
+            _spriteBatch.Begin();
+            roomPosition = CentreMap(building.GetRoomByID(roomID), centrePoint);
+            DisplayGameText(new Vector2(0.0f, -15.0f));
+            _spriteBatch.End();
+        }
+
+        private void DisplayGameText()
+        {
+            DisplayGameText(Vector2.Zero);
+        }
+
+        private void DisplayGameText(Vector2 offset)
         {
             Room currentRoom = building.GetRoomByID(roomID);
-            
-            for (int i = 0; i < screenHeight / fontHeight; i++) 
+
+            int upperVertical = (screenHeight / fontHeight) - 1;
+            int upperHorizontal = (screenWidth / fontWidth);
+
+            for (int i = 0; i < upperVertical; i++) 
             {
-                for(int j = 0; j < screenWidth / fontWidth; j++)
+                for(int j = 0; j < upperHorizontal; j++)
                 {
-                    Vector2 textPosition = VectorTimesText(new Vector2(j, i)) + Offset;
+                    Vector2 textPosition = VectorTimesText(new Vector2(j, i)) + offset;
                     Color textColor = Color.White;
                     string textString = " ";
 
-                    if (roomPosition.Y <= i && (roomPosition.Y + currentRoom.height) >= i && roomPosition.X <= j && (roomPosition.X + currentRoom.width) >= j)
+                    if (roomPosition.Y <= i && (roomPosition.Y + currentRoom.GetRoomSize().Y) >= i && roomPosition.X <= j && (roomPosition.X + currentRoom.GetRoomSize().X) >= j)
                     {
                         textColor = roomColor;
                         textString = ".";
-                        if (i == roomPosition.Y || i == (roomPosition.Y + currentRoom.height))
+                        if (i == roomPosition.Y || i == (roomPosition.Y + currentRoom.GetRoomSize().Y))
                         {
                             textString = "=";
                         }
-                        else if (j == roomPosition.X || j == (roomPosition.X + currentRoom.width))
+                        else if (j == roomPosition.X || j == (roomPosition.X + currentRoom.GetRoomSize().X))
                         {
                             textString = "H";
                         }
 
                         Item item;
-                        if (currentRoom.items.Count > 0 && currentRoom.FindItem(j - (int)(roomPosition.X), i - (int)(roomPosition.Y), out item))
+                        if (currentRoom.GetItemCount() > 0 && currentRoom.FindItem(j - (int)(roomPosition.X), i - (int)(roomPosition.Y), out item))
                         {
                             textColor = itemColor;
                             textString = "i";
                         }
 
                         Interactable interactable;
-                        if (currentRoom.interactables.Count > 0 && currentRoom.FindInteractable(j - (int)(roomPosition.X), i - (int)(roomPosition.Y), out interactable))
+                        if (currentRoom.GetInteractableCount() > 0 && currentRoom.FindInteractable(j - (int)(roomPosition.X), i - (int)(roomPosition.Y), out interactable))
                         {
                             textColor = interactableColor;
                             textString = "#";
                         }
                     }
 
-                    if (i == verticalDivider)
+                    if (i >= verticalDivider)
                     {
-                        textColor = UIColor;
-                        textString = "-";
+
+                        if (i == verticalDivider || i != (upperVertical - 1))
+                        {
+                            textColor = UIColor;
+                            textString = "-";
+                        }
+                        else if (i == (upperVertical - 1) && j == 0)
+                        {
+                            textColor= UIColor;
+                            textString = "User Input";
+                        }
                     }
-                    else if (j == horizontalDivider && i < verticalDivider)
+                    else if (j >= horizontalDivider)
                     {
-                        textColor = UIColor;
-                        textString = "|";
+                        if (j == horizontalDivider)
+                        {
+                            textColor = UIColor;
+                            textString = "|";
+                        }
+                    }
+
+                    if (playerPosition == new Vector2(j - (int)(roomPosition.X), i - (int)(roomPosition.Y)))
+                    {
+                        textColor = playerColor;
+                        textString = "@";
                     }
 
                     _spriteBatch.DrawString(font, textString, textPosition, textColor);

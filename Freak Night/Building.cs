@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Numerics;
+using Microsoft.Xna.Framework;
 
 public class Building
 {
@@ -45,7 +45,7 @@ public class Building
     {
         foreach (Room room in rooms)
         {
-            if (room.id == id)
+            if (room.GetRoomID() == id)
             {
                 return room;
             }
@@ -58,22 +58,34 @@ public class Building
 public class Room
 {
     [JsonProperty("name")]
-    public string name { get; set; }
+    string name { get; set; }
     
     [JsonProperty("id")]
-    public int id { get; set; }
+    int id { get; set; }
+
+    [JsonProperty("north")]
+    int northRoom { get; set; }
+
+    [JsonProperty("east")]
+    int eastRoom { get; set; }
+
+    [JsonProperty("south")]
+    int southRoom { get; set; }
+
+    [JsonProperty("west")]
+    int westRoom { get; set; }
 
     [JsonProperty("width")]
-    public int width { get; set; }
+    int width { get; set; }
     
     [JsonProperty("height")]
-    public int height { get; set; }
+    int height { get; set; }
     
     [JsonProperty("items")]
-    public List<Item> items { get; set; }
+    List<Item> items { get; set; }
     
     [JsonProperty("interactables")]
-    public List<Interactable> interactables { get; set; }
+    List<Interactable> interactables { get; set; }
 
     public Room(string _name, int _id, int _width, int _height, List<Item> _items, List<Interactable> _interactables)
     {
@@ -83,6 +95,28 @@ public class Room
         height = _height;
         items = _items;
         interactables = _interactables;
+    }
+
+    public int GetRoomID()
+    {
+        return id;
+    }
+    public int GetItemCount()
+    {
+        return items.Count;
+    }
+    public int GetInteractableCount()
+    {
+        return interactables.Count;
+    }
+    public Vector2 GetRoomSize() 
+    { 
+        return new Vector2(width, height);
+    }
+
+    public int[] GetConnectedRooms()
+    {
+        return new int[] { northRoom, eastRoom, southRoom, westRoom };
     }
 
     //Finding things
@@ -124,6 +158,25 @@ public class Room
         return false;
     }
 
+    public bool FindInteractable(Vector2 position)
+    {
+        Interactable interactable;
+        return FindInteractable(position, out interactable);
+    }
+    public bool FindInteractable(Vector2 position, out Interactable interactableFound)
+    {
+        interactableFound = new Interactable();
+        foreach (Interactable interactable in interactables)
+        {
+            if (interactable.GetPosition() == position)
+            {
+                interactableFound = interactable;
+                return true;
+            }
+        }
+        return false;
+    }
+
     public bool FindInteractable(int xPos, int yPos)
     {
         Interactable interactable;
@@ -131,16 +184,7 @@ public class Room
     }
     public bool FindInteractable(int xPos, int yPos, out Interactable interactableFound)
     {
-        interactableFound = new Interactable();
-        foreach (Interactable interactable in interactables)
-        {
-            if (interactable.xPos == xPos && interactable.yPos == yPos)
-            {
-                interactableFound = interactable;
-                return true;
-            }
-        }
-        return false;
+        return FindInteractable(new Vector2(xPos, yPos), out interactableFound);
     }
 
     public bool FindInteractable(string name)
@@ -153,7 +197,7 @@ public class Room
         interactableFound = new Interactable();
         foreach (Interactable interactable in interactables)
         {
-            if (interactable.name == name)
+            if (interactable.GetName() == name)
             {
                 interactableFound = interactable;
                 return true;
@@ -161,28 +205,22 @@ public class Room
         }
         return false;
     }
-
-    //Get room size in vector2
-    public Vector2 GetSizeInVector2()
-    {
-        return new Vector2(width, height);
-    }
 }
 
 [JsonObject("Interactable")]
 public class Interactable
 {
     [JsonProperty("name")]
-    public string name { get; set; }
+    string name { get; set; }
 
     [JsonProperty("id")]
-    public int id { get; set; }
+    int id { get; set; }
 
     [JsonProperty("xPos")]
-    public int xPos { get; set; }
+    int xPos { get; set; }
 
     [JsonProperty("yPos")]
-    public int yPos { get; set; }
+    int yPos { get; set; }
 
     public Interactable()
     {
@@ -200,16 +238,19 @@ public class Interactable
         yPos = _yPos;
     }
 
-    public void Interact()
+    public Vector2 GetPosition()
     {
-        switch (id)
-        {
-            case 0:
+        return new Vector2(xPos, yPos);
+    }
 
-                break;
-            default:
-                break;
-        }
+    public string GetName()
+    {
+        return name;
+    }
+
+    public int GetID()
+    {
+        return id;
     }
 }
 
@@ -249,8 +290,13 @@ public class Item
         yPos = _yPos;
     }
 
-    public void Use()
+    public string GetName()
     {
+        return name;
+    }
 
+    public int GetID()
+    {
+        return id;
     }
 }
