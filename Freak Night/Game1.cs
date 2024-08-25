@@ -260,7 +260,7 @@ namespace Freak_Night
                         inputTextArea[1] = "Couldn't find a command to match what you are trying to do.";
                     }
                 }
-                else if (pressedKey == Keys.Back)
+                else if (pressedKey == Keys.Back && inputTextArea[0].Length > 0)
                 {
                     inputTextArea[0] = inputTextArea[0].Remove(inputTextArea[0].Length - 1);
                 }
