@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Microsoft.Xna.Framework;
+using System.Security.Cryptography;
+using System.Xml.Linq;
 
 public class Building
 {
@@ -46,14 +48,101 @@ public class Building
         return rooms;
     }
 
-    public Room GetRoomByID(int id)
+    public void AddRoom(Vector2 position)
     {
+        rooms.Add(new Room((int)position.X, (int)position.Y));
+    }
+
+    public void RemoveRoom(Vector2 position)
+    {
+        rooms.Remove(rooms.Find(room => room.GetPosition() == position));
+    }
+
+    public void RemoveRoom(string name)
+    {
+        rooms.Remove(rooms.Find(room => room.name == name));
+    }
+
+    public void RemoveRoom(int id)
+    {
+        rooms.Remove(rooms.Find(room => room.GetRoomID() == id));
+    }
+
+    public bool FindRoom(Vector2 position)
+    {
+        Room room;
+        return FindRoom(position, out room);
+    }
+    public bool FindRoom(Vector2 position, out Room roomFound)
+    {
+        roomFound = new Room();
+        foreach (Room room in rooms)
+        {
+            if (room.GetPosition() == position)
+            {
+                roomFound = room;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public bool FindRoom(int xPos, int yPos)
+    {
+        Room room;
+        return FindRoom(xPos, yPos, out room);
+    }
+    public bool FindRoom(int xPos, int yPos, out Room roomFound)
+    {
+        return FindRoom(new Vector2(xPos, yPos), out roomFound);
+    }
+
+    public bool FindRoom(string name)
+    {
+        Room room;
+        return FindRoom(name, out room);
+    }
+    public bool FindRoom(string name, out Room roomFound)
+    {
+        roomFound = new Room();
+        foreach (Room room in rooms)
+        {
+            if (room.name.ToLower().Contains(name.ToLower()))
+            {
+                roomFound = room;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public bool FindRoom(int id)
+    {
+        Room room;
+        return FindRoom(id, out room);
+    }
+    public bool FindRoom(int id, out Room roomFound)
+    {
+        roomFound = new Room();
         foreach (Room room in rooms)
         {
             if (room.GetRoomID() == id)
             {
-                return room;
+                roomFound = room;
+                return true;
             }
+        }
+        return false;
+    }
+
+    
+
+    public Room GetRoomByID(int id)
+    {
+        Room room;
+        if (FindRoom(id, out room))
+        {
+            return room;
         }
         return null;
     }
@@ -63,7 +152,7 @@ public class Building
 public class Room
 {
     [JsonProperty("name")]
-    string name { get; set; }
+    public string name { get; set; }
     
     [JsonProperty("id")]
     int id { get; set; }
@@ -91,6 +180,32 @@ public class Room
     
     [JsonProperty("interactables")]
     List<Interactable> interactables { get; set; }
+
+    public Room()
+    {
+        name = "Default";
+        id = -1;
+        connectedRooms = new int[] { -1, -1, -1, -1 };
+        xPos = 0;
+        yPos = 0;
+        width = 1;
+        height = 1;
+        items = new List<Item>();
+        interactables = new List<Interactable>();
+    }
+
+    public Room(int _xPos, int _yPos)
+    {
+        name = "Default";
+        id = -1;
+        connectedRooms = new int[]{ -1, -1, -1, -1};
+        xPos = _xPos;
+        yPos = _yPos;
+        width = 1;
+        height = 1;
+        items = new List<Item>();
+        interactables = new List<Interactable>();
+    }
 
     public Room(string _name, int _id, int[] _connectedRooms, int _xPos, int _yPos, int _width, int _height, List<Item> _items, List<Interactable> _interactables)
     {
@@ -135,7 +250,31 @@ public class Room
         return connectedRooms;
     }
 
+    public List<Item> GetItems() 
+    { 
+        return items;
+    }
+
     //Finding things
+    public bool FindItem(Vector2 position)
+    {
+        Item item;
+        return FindItem(position, out item);
+    }
+    public bool FindItem(Vector2 position, out Item itemFound)
+    {
+        itemFound = new Item();
+        foreach (Item item in items)
+        {
+            if (item.GetPosition() == position)
+            {
+                itemFound = item;
+                return true;
+            }
+        }
+        return false;
+    }
+
     public bool FindItem(int xPos, int yPos)
     {
         Item discard;
@@ -165,7 +304,7 @@ public class Room
         itemFound = new Item();
         foreach (Item item in items)
         {
-            if (item.name == name)
+            if (item.name.ToLower().Contains(name.ToLower()))
             {
                 itemFound = item;
                 return true;
@@ -213,7 +352,7 @@ public class Room
         interactableFound = new Interactable();
         foreach (Interactable interactable in interactables)
         {
-            if (interactable.GetName() == name)
+            if (interactable.name.ToLower().Contains(name.ToLower()))
             {
                 interactableFound = interactable;
                 return true;
@@ -221,13 +360,50 @@ public class Room
         }
         return false;
     }
+
+    //Removing Items
+    public void RemoveItem(int xPos, int yPos)
+    {
+        Item item;
+        if (FindItem(xPos, yPos, out item))
+        {
+            items.Remove(item);
+        }
+        
+    }
+    public void RemoveItem(string name)
+    {
+        Item item;
+        if (FindItem(name, out item))
+        {
+            items.Remove(item);
+        }
+    }
+    public void RemoveItem(Item item)
+    {
+        items.Remove(item);
+    }
+
+    //Adding Items
+
+    public void AddItem(Item item, int xPos, int yPos)
+    {
+        item.xPos = xPos; 
+        item.yPos = yPos;
+        items.Add(item);
+    }
+
+    public void AddItem(Item item, Vector2 position)
+    {
+        AddItem(item, (int)position.X, (int)position.Y);
+    }
 }
 
 [JsonObject("Interactable")]
 public class Interactable
 {
     [JsonProperty("name")]
-    string name { get; set; }
+    public string name { get; set; }
 
     [JsonProperty("id")]
     int id { get; set; }
@@ -354,5 +530,10 @@ public class Item
     public string GetTextString()
     {
         return textString;
+    }
+
+    public Vector2 GetPosition()
+    {
+        return new Vector2(xPos, yPos);
     }
 }

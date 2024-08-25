@@ -47,6 +47,10 @@ namespace Freak_Night
         KeyboardState previousKeyboard;
         KeyboardState currentKeyboard;
 
+        //Comands
+        static readonly string[] gameplayCommands = { "i", "inspect","x", "eximine", "p", "pickup", "d", "drop", "h", "hide", "m", "map", "u", "use", "ping" };
+        static readonly string[] editingCommands = { "add", "remove", "pickup", "place", "change" };
+
         //Display
         Vector2 roomPosition;
         Vector2 centrePoint;
@@ -54,12 +58,12 @@ namespace Freak_Night
         int verticalDivider;
         string defaultBackground;
         bool isEditing;
-        string sideAreaText;
-        string inputAreaText;
+        bool isMapDisplaying;
+        Queue<string> sideTextArea;
+        string[] inputTextArea;
 
         //Player
-        Vector2 playerRoomPosition;
-        Vector2 playerMapPosition;
+        Player player;
 
         //Building
         Building building;
@@ -89,17 +93,23 @@ namespace Freak_Night
             _graphics.PreferredBackBufferWidth = screenWidth;
             _graphics.ApplyChanges();
 
+            Window.TextInput += TextInputHandler;
+
+
             horizontalDivider = 46;
             verticalDivider = 22;
             centrePoint = new Vector2(horizontalDivider / 2, verticalDivider / 2);
             defaultBackground = " ";
 
             isEditing = false;
+            isMapDisplaying = true;
 
             roomID = 0;
 
-            playerRoomPosition = Vector2.One;
-            playerMapPosition = centrePoint;
+            player = new Player(Vector2.One, centrePoint, new List<Item>() { });
+
+            sideTextArea = new Queue<string>();
+            inputTextArea = new string[2] { "", ""};
 
             base.Initialize();
         }
@@ -116,7 +126,7 @@ namespace Freak_Night
 
             building = new Building(path);
 
-            playerRoomPosition = building.GetRoomByID(roomID).GetRoomSize() / 2;
+            player.SetRoomPosition(building.GetRoomByID(roomID).GetRoomSize() / 2);
         }
 
         protected override void Update(GameTime gameTime)
@@ -161,12 +171,116 @@ namespace Freak_Night
             base.Draw(gameTime);
         }
 
+
+        //"x", "eximine", "p", "pickup", "h", "hide", "m", "map", "u", "use", "ping"
+
         private void TextInputHandler(object sender, TextInputEventArgs args)
         {
             var pressedKey = args.Key;
             var character = args.Character;
+            if (!isEditing)
+            {
+                if (pressedKey == Keys.Enter)
+                {
+                    Room currentRoom = building.GetRoomByID(roomID);
+                    string command = Array.Find<string>(gameplayCommands, command => command == inputTextArea[0].Split(' ')[0]);
+                    if (command == "x" || command == "eximine")
+                    {
+                        Item item;
+                        if (inputTextArea[0].Split(' ').Length > 1 && currentRoom.FindItem(inputTextArea[0].Split(' ')[1], out item))
+                        {
+                            inputTextArea[0] = "";
+                            inputTextArea[1] = item.description;
+                        }
+                        else
+                        {
+                            inputTextArea[0] = "";
+                            inputTextArea[1] = "Couldn't find an item by that name.";
+                        }
+                    }
+                    else if (inputTextArea[0].Split(' ').Length > 1 && command == "p" || command == "pickup")
+                    {
+                        Item item;
+                        if (currentRoom.FindItem(inputTextArea[0].Split(' ')[1], out item))
+                        {
+                            inputTextArea[0] = "";
+                            inputTextArea[1] = "Picked up " + item.name.ToLower() + ".";
 
-            inputAreaText += character.ToString();
+                            player.AddItem(item);
+                            currentRoom.RemoveItem(item);
+                        }
+                        else
+                        {
+                            inputTextArea[0] = "";
+                            inputTextArea[1] = "Couldn't find an item by that name.";
+                        }
+                    }
+                    else if (inputTextArea[0].Split(' ').Length > 1 && command == "d" || command == "drop")
+                    {
+                        Item item;
+                        if (player.FindItem(inputTextArea[0].Split(' ')[1], out item))
+                        {
+                            inputTextArea[0] = "";
+                            inputTextArea[1] = "Dropped " + item.name + ".";
+
+                            currentRoom.AddItem(item, player.GetRoomPosition());
+                            player.RemoveItem(item);
+                        }
+                    }
+                    else if (command == "h" || command == "hide")
+                    {
+                        Interactable interactable;
+                        if (currentRoom.FindInteractable("Cabin", out interactable))
+                        {
+
+                        }
+                        else
+                        {
+                            inputTextArea[0] = "";
+                            inputTextArea[1] = "Couldn't find a place to hide.";
+                        }
+                    }
+                    else if (command == "m" || command == "map")
+                    {
+
+                    }
+                    else if ((inputTextArea[0].Split(' ').Length > 2 && inputTextArea[0].Split(' ')[2].ToLower() != "in") ||
+                        (inputTextArea[0].Split(' ').Length > 3) &&
+                        command == "u" || command == "use")
+                    {
+
+                    }
+                    else if (command == "ping")
+                    {
+
+                    }
+                    else
+                    {
+                        inputTextArea[0] = "";
+                        inputTextArea[1] = "Couldn't find a command to match what you are trying to do.";
+                    }
+                }
+                else if (pressedKey == Keys.Back)
+                {
+                    inputTextArea[0] = inputTextArea[0].Remove(inputTextArea[0].Length - 1);
+                }
+                else if (pressedKey <= (Keys)31)
+                {
+
+                }
+                else
+                {
+                    inputTextArea[0] += character.ToString();
+                }
+            }
+            else
+            {
+                if (pressedKey == Keys.Enter)
+                {
+                    string command = Array.Find<string>(gameplayCommands, command => command == inputTextArea[0].Split(' ')[0]);
+
+                }
+            }
         }
 
         private bool IsKeyPressed(Keys key)
@@ -215,7 +329,7 @@ namespace Freak_Night
                 isEditing = false;
             }
 
-            if (IsKeyPressed(Keys.M) && currentKeyboard.IsKeyDown(Keys.RightAlt))
+            if (IsKeyPressed(Keys.M) && (currentKeyboard.IsKeyDown(Keys.LeftShift) || currentKeyboard.IsKeyDown(Keys.RightShift)))
             {
                 if (currentScene == GameScene.RoomScene)
                 {
@@ -229,16 +343,84 @@ namespace Freak_Night
 
             if (currentScene == GameScene.RoomScene)
             {
-                playerRoomPosition += direction;
+                player.SetRoomPosition(player.GetRoomPosition() + direction);
 
+                Item item;
+                Interactable interactable;
+                if (building.GetRoomByID(roomID).FindItem(player.GetRoomPosition(), out item))
+                {
+                    sideTextArea.Clear();
 
+                    QueueStringToSide("Name: " + item.name);
+                    QueueStringToSide("Description: " + item.description);
+                    QueueStringToSide("ID: " + item.id);
+                    QueueStringToSide("xPos: " + item.xPos);
+                    QueueStringToSide("yPos: " + item.yPos);
+                    QueueStringToSide("textColor: " + item.GetColor());
+                    QueueStringToSide("textString: " + item.GetTextString());
+
+                }
+                else if (building.GetRoomByID(roomID).FindInteractable(player.GetRoomPosition(), out interactable))
+                {
+                    sideTextArea.Clear();
+
+                    QueueStringToSide("Name: " + interactable.name);
+                    QueueStringToSide("ID: " + interactable.GetID());
+                    QueueStringToSide("xPos: " + interactable.GetPosition().X);
+                    QueueStringToSide("yPos: " + interactable.GetPosition().Y);
+                    QueueStringToSide("textColor: " + interactable.GetColor());
+                    QueueStringToSide("textString: " + interactable.GetTextString());
+                }
+                else if (!building.GetRoomByID(roomID).FindItem(player.GetRoomPosition()) &&
+                    !building.GetRoomByID(roomID).FindInteractable(player.GetRoomPosition()))
+                {
+                    sideTextArea.Clear();
+                }
             }
             else if (currentScene == GameScene.MapScene)
             {
-                playerMapPosition += direction;
+                player.SetMapPosition(player.GetMapPosition() + direction);
+
+                Room room;
+                if (building.FindRoom((player.GetMapPosition() - centrePoint) / 2, out room))
+                {
+                    sideTextArea.Clear();
+
+                    QueueStringToSide("Name: " + room.name);
+                    QueueStringToSide("ID: " + room.GetRoomID());
+                    string textToDisplay = "connectedRooms: ";
+                    foreach (int roomID in room.GetConnectedRooms())
+                    {
+                        if (roomID != -1)
+                        {
+                            if (textToDisplay != "connectedRooms: ")
+                            {
+                                textToDisplay += ", ";
+                            }
+                            textToDisplay += roomID;
+                        }
+                    }
+                    QueueStringToSide(textToDisplay);
+                    QueueStringToSide("xPos: " + room.GetPosition().X);
+                    QueueStringToSide("yPos: " + room.GetPosition().Y);
+                    QueueStringToSide("width: " + room.GetRoomSize().X);
+                    QueueStringToSide("height: " + room.GetRoomSize().Y);
+
+                }
+                else if (!building.FindRoom((player.GetMapPosition() - centrePoint) / 2))
+                {
+                    sideTextArea.Clear();
+                }
             }
         }
 
+        private void QueueStringToSide(string textToQueue)
+        {
+            for (int i = 0; i < textToQueue.Length; i += (screenWidth / fontWidth) - horizontalDivider - 1)
+            {
+                sideTextArea.Enqueue(textToQueue.Substring(i, (int)MathF.Min((screenWidth / fontWidth) - horizontalDivider - 1, textToQueue.Length - i)));
+            }
+        }
 
         //Gameplay Functions
 
@@ -258,8 +440,10 @@ namespace Freak_Night
 
             if ((currentKeyboard.IsKeyDown(Keys.LeftShift) || currentKeyboard.IsKeyDown(Keys.RightShift)) && IsKeyPressed(Keys.M))
             {
+                sideTextArea.Clear();
                 if (currentScene == GameScene.RoomScene)
                 {
+                    player.SetMapPosition(centrePoint + building.GetRoomByID(roomID).GetPosition() * 2);
                     currentScene = GameScene.MapScene;
                 }
                 else if (currentScene == GameScene.MapScene)
@@ -271,7 +455,7 @@ namespace Freak_Night
             Room currentRoom = building.GetRoomByID(roomID);
 
             Interactable interactable;
-            if (currentRoom.FindInteractable(playerRoomPosition + direction, out interactable))
+            if (currentRoom.FindInteractable(player.GetRoomPosition() + direction, out interactable))
             {
                 switch (interactable.GetID())
                 {
@@ -279,28 +463,28 @@ namespace Freak_Night
                         roomID = currentRoom.GetConnectedRooms()[0];
                         if (building.GetRoomByID(roomID).FindInteractable("SouthDoor", out interactable))
                         {
-                            playerRoomPosition = interactable.GetPosition() + new Vector2(0, -1);
+                            player.SetRoomPosition(interactable.GetPosition() + new Vector2(0, -1));
                         }
                         break;
                     case 1:
                         roomID = currentRoom.GetConnectedRooms()[1];
                         if (building.GetRoomByID(roomID).FindInteractable("WestDoor", out interactable))
                         {
-                            playerRoomPosition = interactable.GetPosition() + new Vector2(1, 0);
+                            player.SetRoomPosition(interactable.GetPosition() + new Vector2(1, 0));
                         }
                         break;
                     case 2:
                         roomID = currentRoom.GetConnectedRooms()[2];
                         if (building.GetRoomByID(roomID).FindInteractable("NorthDoor", out interactable))
                         {
-                            playerRoomPosition = interactable.GetPosition() + new Vector2(0, 1);
+                            player.SetRoomPosition(interactable.GetPosition() + new Vector2(0, 1));
                         }
                         break;
                     case 3:
                         roomID = currentRoom.GetConnectedRooms()[3];
                         if (building.GetRoomByID(roomID).FindInteractable("EastDoor", out interactable))
                         {
-                            playerRoomPosition = interactable.GetPosition() + new Vector2(-1, 0);
+                            player.SetRoomPosition(interactable.GetPosition() + new Vector2(-1, 0));
                         }
                         break;
                     case 4:
@@ -309,21 +493,50 @@ namespace Freak_Night
                         break;
                 }
             }
-
-            if (currentScene == GameScene.RoomScene)
+            else if (currentScene == GameScene.RoomScene)
             {
-                if ((playerRoomPosition + direction).X < currentRoom.GetRoomSize().X &&
-                    (playerRoomPosition + direction).X > 0 &&
-                    (playerRoomPosition + direction).Y < currentRoom.GetRoomSize().Y &&
-                    (playerRoomPosition + direction).Y > 0
+                if ((player.GetRoomPosition() + direction).X < currentRoom.GetRoomSize().X &&
+                    (player.GetRoomPosition() + direction).X > 0 &&
+                    (player.GetRoomPosition() + direction).Y < currentRoom.GetRoomSize().Y &&
+                    (player.GetRoomPosition() + direction).Y > 0
                     )
                 {
-                    playerRoomPosition += direction;
+                    player.SetRoomPosition(player.GetRoomPosition() + direction);
+                }
+
+                if (sideTextArea.Count != player.GetItems().Count)
+                {
+                    sideTextArea.Clear();
+                    foreach (Item item in player.GetItems())
+                    {
+                        if (!sideTextArea.Contains(item.name))
+                        {
+                            sideTextArea.Enqueue(item.name);
+                        }
+                    }
                 }
             }
             else if (currentScene == GameScene.MapScene)
             {
-                playerMapPosition += direction;
+                player.SetMapPosition(player.GetMapPosition() + direction);
+                Room room;
+                if (building.FindRoom((player.GetMapPosition() - centrePoint) / 2, out room) && sideTextArea.Count != 1 + room.GetItemCount())
+                {
+                    sideTextArea.Clear();
+                    sideTextArea.Enqueue(room.name);
+                    sideTextArea.Enqueue("");
+                    foreach (Item item in room.GetItems())
+                    {
+                        if (!sideTextArea.Contains(item.name))
+                        {
+                            sideTextArea.Enqueue(item.name);
+                        }
+                    }
+                }
+                else if (!building.FindRoom((player.GetMapPosition() - centrePoint) / 2))
+                {
+                    sideTextArea.Clear();
+                }
             }
         }
 
@@ -366,7 +579,7 @@ namespace Freak_Night
                     {
                         displayText = DisplayMapText(i, j, displayText);
                     }
-                    else if (currentScene == GameScene.RoomScene)
+                    else if (currentScene == GameScene.RoomScene && isMapDisplaying)
                     {
                         displayText = DisplayRoomText(i, j, displayText);
                     }
@@ -389,16 +602,31 @@ namespace Freak_Night
 
                 if (i == verticalDivider)
                 {
-                    displayText = new DisplayText(UIColor, "-");
+                    displayText.text = "-";
+                }
+                else if (i > verticalDivider)
+                {
+                    if (i - verticalDivider < 3 && j < inputTextArea[1].Length)
+                    {
+                        displayText.text = inputTextArea[1].ToCharArray()[j].ToString();
+                    }
+                    else if (i - verticalDivider == 3 && j < inputTextArea[0].Length)
+                    {
+                        displayText.text = inputTextArea[0].ToCharArray()[j].ToString();
+                    }
                 }
             }
             else if (j >= horizontalDivider)
             {
-                displayText = new DisplayText(UIColor, " ");
+                displayText.text = " ";
 
                 if (j == horizontalDivider)
                 {
-                    displayText = new DisplayText(UIColor, "|");
+                    displayText.text = "|";
+                }
+                else if (i < sideTextArea.Count && ((j - horizontalDivider) - 1) < sideTextArea.ToArray()[i].Length)
+                {
+                    displayText.text = sideTextArea.ToArray()[i].ToCharArray()[(j - horizontalDivider) - 1].ToString();
                 }
             }
 
@@ -425,8 +653,8 @@ namespace Freak_Night
 
         private DisplayText DisplayPlayerText(int i, int j, DisplayText displayText)
         {
-            if ((currentScene == GameScene.MapScene && playerMapPosition == new Vector2(j, i)) ||
-                (currentScene == GameScene.RoomScene && playerRoomPosition == new Vector2(j - (int)(roomPosition.X), i - (int)(roomPosition.Y))))
+            if ((currentScene == GameScene.MapScene && player.GetMapPosition() == new Vector2(j, i)) ||
+                (currentScene == GameScene.RoomScene && player.GetRoomPosition() == new Vector2(j - (int)(roomPosition.X), i - (int)(roomPosition.Y))))
             {
                 displayText = new DisplayText(playerColor, "@");
             }
