@@ -135,6 +135,13 @@ namespace Freak_Night
 
             building = new Building(path);
 
+            foreach (var room in building.GetRooms())
+            {
+                room.isExplored = false;
+            }
+
+            building.GetRoomByID(roomID).isExplored = true;
+
             player.SetRoomPosition(building.GetRoomByID(roomID).GetRoomSize() / 2);
         }
 
@@ -291,6 +298,7 @@ namespace Freak_Night
                     else if (command == "m" || command == "map")
                     {
                         isMapDisplaying = !isMapDisplaying;
+                        AddStringToBottom("Mapp off!");
                     }
                     else if (
                         (inputTextArea[0].Split(' ').Length > 2 &&
@@ -1000,6 +1008,7 @@ namespace Freak_Night
                         if (currentRoom.GetConnectedRooms()[0] != -1)
                         {
                             roomID = currentRoom.GetConnectedRooms()[0];
+                            building.GetRoomByID(roomID).isExplored = true;
                             if (building.GetRoomByID(roomID).FindInteractable("SouthDoor", out interactable))
                             {
                                 player.SetRoomPosition(interactable.GetPosition() + new Vector2(0, -1));
@@ -1010,6 +1019,7 @@ namespace Freak_Night
                         if (currentRoom.GetConnectedRooms()[1] != -1)
                         {
                             roomID = currentRoom.GetConnectedRooms()[1];
+                            building.GetRoomByID(roomID).isExplored = true;
                             if (building.GetRoomByID(roomID).FindInteractable("WestDoor", out interactable))
                             {
                                 player.SetRoomPosition(interactable.GetPosition() + new Vector2(1, 0));
@@ -1020,6 +1030,7 @@ namespace Freak_Night
                         if (currentRoom.GetConnectedRooms()[2] != -1)
                         {
                             roomID = currentRoom.GetConnectedRooms()[2];
+                            building.GetRoomByID(roomID).isExplored = true;
                             if (building.GetRoomByID(roomID).FindInteractable("NorthDoor", out interactable))
                             {
                                 player.SetRoomPosition(interactable.GetPosition() + new Vector2(0, 1));
@@ -1030,6 +1041,7 @@ namespace Freak_Night
                         if (currentRoom.GetConnectedRooms()[3] != -1)
                         {
                             roomID = currentRoom.GetConnectedRooms()[3];
+                            building.GetRoomByID(roomID).isExplored = true;
                             if (building.GetRoomByID(roomID).FindInteractable("EastDoor", out interactable))
                             {
                                 player.SetRoomPosition(interactable.GetPosition() + new Vector2(-1, 0));
@@ -1044,7 +1056,8 @@ namespace Freak_Night
             }
             else if (currentScene == GameScene.RoomScene)
             {
-                if ((player.GetRoomPosition() + direction).X < currentRoom.GetRoomSize().X &&
+                if (!player.GetHiding() &&
+                    (player.GetRoomPosition() + direction).X < currentRoom.GetRoomSize().X &&
                     (player.GetRoomPosition() + direction).X > 0 &&
                     (player.GetRoomPosition() + direction).Y < currentRoom.GetRoomSize().Y &&
                     (player.GetRoomPosition() + direction).Y > 0
@@ -1069,7 +1082,9 @@ namespace Freak_Night
             {
                 player.SetMapPosition(player.GetMapPosition() + direction);
                 Room room;
-                if (building.FindRoom(PositionToMap(player.GetMapPosition()), out room) && sideTextArea.Count != 1 + room.GetItemCount())
+                if (building.FindRoom(PositionToMap(player.GetMapPosition()), out room) &&
+                    room.isExplored &&
+                    sideTextArea.Count != 1 + room.GetItemCount())
                 {
                     sideTextArea.Clear();
                     QueueStringToSide(room.name);
@@ -1136,7 +1151,10 @@ namespace Freak_Night
 
                     displayText = DisplayUIText(i, j, displayText);
 
-                    displayText = DisplayPlayerText(i, j, displayText);
+                    if (!player.GetHiding())
+                    {
+                        displayText = DisplayPlayerText(i, j, displayText);
+                    }
 
                     _spriteBatch.DrawString(font, displayText.text, textPosition, displayText.color);
                 }
