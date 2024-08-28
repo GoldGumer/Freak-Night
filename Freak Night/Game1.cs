@@ -48,7 +48,7 @@ namespace Freak_Night
         KeyboardState currentKeyboard;
 
         //Comands
-        static readonly string[] gameplayCommands = { "i", "inspect","x", "eximine", "p", "pickup", "d", "drop", "h", "hide", "m", "map", "u", "use", "ping" };
+        static readonly string[] gameplayCommands = { "i", "inspect","x", "examine", "p", "pickup", "d", "drop", "h", "hide", "m", "map", "u", "use", "ping" };
         static readonly string[] editingCommands = { "a", "add", "r", "remove", "pu", "pickup", "pa", "place", "c", "change" };
 
         //Display
@@ -193,7 +193,7 @@ namespace Freak_Night
                 {
                     Room currentRoom = building.GetRoomByID(roomID);
                     string command = Array.Find<string>(gameplayCommands, command => command == inputTextArea[0].Split(' ')[0]);
-                    if (command == "x" || command == "eximine")
+                    if (command == "i" || command == "inspect")
                     {
                         Item item;
                         if (inputTextArea[0].Split(' ').Length > 1 && currentRoom.FindItem(inputTextArea[0].Split(' ')[1], out item))
@@ -204,6 +204,50 @@ namespace Freak_Night
                         {
                             AddStringToBottom("Couldn't find an item by that name.");
                         }
+                    }
+                    else if (command == "x" || command == "examine")
+                    {
+                        string stringToAdd = "There is a ";
+
+                        for (int i = 0; i < currentRoom.GetItemCount(); i++)
+                        {
+                            if (i != 0 && currentRoom.GetItemCount() - 1 == i)
+                            {
+                                stringToAdd += " and ";
+                            }
+                            else if (i != 0)
+                            {
+                                stringToAdd += ", ";
+                            }
+
+                            stringToAdd += currentRoom.GetItems().ToArray()[i].name;
+                        }
+
+                        stringToAdd += " on the floor. There is also ";
+
+                        for (int i = 0; i < currentRoom.GetInteractableCount(); i++)
+                        {
+                            if (i != 0 && currentRoom.GetInteractableCount() - 1 == i)
+                            {
+                                stringToAdd += " and ";
+                            }
+                            else if (i != 0)
+                            {
+                                stringToAdd += ", ";
+                            }
+
+                            stringToAdd += currentRoom.GetInteractables().ToArray()[i].name;
+                        }
+
+                        stringToAdd += " object ";
+                        if (currentRoom.GetInteractableCount() > 1)
+                        {
+                            stringToAdd += "s ";
+                        }
+
+                        stringToAdd += "that you can interact with around you.";
+
+                        AddStringToBottom(stringToAdd);
                     }
                     else if (command == "p" || command == "pickup")
                     {
@@ -234,9 +278,10 @@ namespace Freak_Night
                     else if (command == "h" || command == "hide")
                     {
                         Interactable interactable;
-                        if (currentRoom.FindInteractable("Cabin", out interactable))
+                        if (currentRoom.FindInteractable(4, out interactable))
                         {
-
+                            player.ChangeHiding();
+                            AddStringToBottom("You are hiding in a " + interactable.name + ".");
                         }
                         else
                         {
@@ -245,7 +290,7 @@ namespace Freak_Night
                     }
                     else if (command == "m" || command == "map")
                     {
-
+                        isMapDisplaying = !isMapDisplaying;
                     }
                     else if (
                         (inputTextArea[0].Split(' ').Length > 2 &&
@@ -258,23 +303,35 @@ namespace Freak_Night
                     else if (command == "ping")
                     {
 
+                        AddStringToBottom("");
                     }
                     else
                     {
                         AddStringToBottom("Couldn't find a command to match what you are trying to do.");
                     }
                 }
-                else if (pressedKey == Keys.Back && inputTextArea[0].Length > 0)
+                else if (pressedKey == Keys.Back || pressedKey == Keys.Delete)
                 {
-                    inputTextArea[0] = inputTextArea[0].Remove(inputTextArea[0].Length - 1);
+                    if (inputTextArea[0].Length > 0)
+                    {
+                        inputTextArea[0] = inputTextArea[0].Remove(inputTextArea[0].Length - 1);
+                    }
                 }
-                else if (pressedKey <= (Keys)31)
+                else if (pressedKey == Keys.Tab || pressedKey == Keys.Insert)
                 {
 
                 }
-                else
+                else if (!currentKeyboard.IsKeyDown(Keys.LeftAlt) && !currentKeyboard.IsKeyDown(Keys.RightAlt))
                 {
-                    inputTextArea[0] += character.ToString();
+                    if (currentKeyboard.IsKeyDown(Keys.LeftShift) || currentKeyboard.IsKeyDown(Keys.RightShift))
+                    {
+                        inputTextArea[0] += character.ToString().ToUpper();
+                    }
+                    else
+                    {
+                        inputTextArea[0] += character.ToString().ToLower();
+                    }
+                    
                 }
             }
             else
@@ -391,6 +448,7 @@ namespace Freak_Night
                         {
                             pickedUpItem = item;
                             AddStringToBottom("Picked up " + item.name);
+                            currentRoom.RemoveItem(item);
                         }
                         else if (
                             currentRoom.FindInteractable(player.GetRoomPosition(), out interactable) &&
@@ -401,6 +459,7 @@ namespace Freak_Night
                         {
                             pickedUpInteractable = interactable;
                             AddStringToBottom("Picked up " + interactable.name);
+                            currentRoom.RemoveInteractable(interactable);
                         }
                         else if (
                             building.FindRoom(player.GetMapPosition(), out room) &&
@@ -409,8 +468,16 @@ namespace Freak_Night
                             pickedUpInteractable == null &&
                             pickedUpRoom == null)
                         {
-                            pickedUpRoom = room;
-                            AddStringToBottom("Picked up " + room.name);
+                            if (roomID != room.GetRoomID())
+                            {
+                                pickedUpRoom = room;
+                                AddStringToBottom("Picked up " + room.name);
+                                building.RemoveRoom(room);
+                            }
+                            else
+                            {
+                                AddStringToBottom("Cannot remove the room you are in.");
+                            }
                         }
                     }
                     else if (command == "pa" || command == "place")
@@ -452,10 +519,14 @@ namespace Freak_Night
                             switch (inputTextArea[0].Split(' ')[1])
                             {
                                 case "name":
-                                    item.name = inputTextArea[0].Split(' ')[2];
+                                    item.name = "";
+                                    for (int i = 2; i < inputTextArea[0].Split(' ').Length; i++)
+                                    {
+                                        item.name += inputTextArea[0].Split(' ')[i] + " ";
+                                    }
                                     break;
                                 case "description":
-                                    item.description = " ";
+                                    item.description = "";
                                     for (int i = 2; i < inputTextArea[0].Split(' ').Length; i++)
                                     {
                                         item.description += inputTextArea[0].Split(' ')[i] + " ";
@@ -681,17 +752,28 @@ namespace Freak_Night
                         AddStringToBottom("Couldn't find a command to match what you are trying to do.");
                     }
                 }
-                else if (pressedKey == Keys.Back && inputTextArea[0].Length > 0)
+                else if (pressedKey == Keys.Back || pressedKey == Keys.Delete)
                 {
-                    inputTextArea[0] = inputTextArea[0].Remove(inputTextArea[0].Length - 1);
+                    if (inputTextArea[0].Length > 0)
+                    {
+                        inputTextArea[0] = inputTextArea[0].Remove(inputTextArea[0].Length - 1);
+                    }
                 }
-                else if (pressedKey <= (Keys)31)
+                else if (pressedKey == Keys.Tab || pressedKey == Keys.Insert)
                 {
 
                 }
-                else 
+                else if (!currentKeyboard.IsKeyDown(Keys.LeftAlt) && !currentKeyboard.IsKeyDown(Keys.RightAlt))
                 {
-                    inputTextArea[0] += character.ToString();
+                    if (currentKeyboard.IsKeyDown(Keys.LeftShift) || currentKeyboard.IsKeyDown(Keys.RightShift))
+                    {
+                        inputTextArea[0] += character.ToString().ToUpper();
+                    }
+                    else
+                    {
+                        inputTextArea[0] += character.ToString().ToLower();
+                    }
+
                 }
             }
         }
@@ -730,15 +812,24 @@ namespace Freak_Night
 
         private void AddStringToBottom(string textToAdd)
         {
+            for (int i = 0; i < inputTextArea.Length; i++)
+            {
+                inputTextArea[i] = "";
+            }
+
             for (int i = 0; i < textToAdd.Length; i += (screenWidth / fontWidth))
             {
                 if (i == 0)
                 {
                     inputTextArea[1] = (textToAdd.Substring(i, (int)MathF.Min((screenWidth / fontWidth), textToAdd.Length - i)));
                 }
-                else
+                else if (i == (screenWidth / fontWidth)) 
                 {
                     inputTextArea[2] = (textToAdd.Substring(i, (int)MathF.Min((screenWidth / fontWidth), textToAdd.Length - i)));
+                }
+                else
+                {
+
                 }
             }
 

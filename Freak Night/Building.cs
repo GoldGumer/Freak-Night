@@ -169,6 +169,9 @@ public class Room
     [JsonProperty("id")]
     public int id { get; set; }
 
+    [JsonProperty("description")]
+    public string description { get; set; }
+
     [JsonProperty("connectedRooms")]
     public int[] connectedRooms { get; set; }
 
@@ -262,9 +265,14 @@ public class Room
         return connectedRooms;
     }
 
-    public List<Item> GetItems() 
-    { 
+    public List<Item> GetItems()
+    {
         return items;
+    }
+
+    public List<Interactable> GetInteractables()
+    {
+        return interactables;
     }
 
     //Finding things
@@ -365,6 +373,25 @@ public class Room
         foreach (Interactable interactable in interactables)
         {
             if (interactable.name.ToLower().Contains(name.ToLower()))
+            {
+                interactableFound = interactable;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public bool FindInteractable(int id)
+    {
+        Interactable interactable;
+        return FindInteractable(id, out interactable);
+    }
+    public bool FindInteractable(int id, out Interactable interactableFound)
+    {
+        interactableFound = new Interactable();
+        foreach (Interactable interactable in interactables)
+        {
+            if (interactable.id == id)
             {
                 interactableFound = interactable;
                 return true;
