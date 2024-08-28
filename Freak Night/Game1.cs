@@ -49,7 +49,7 @@ namespace Freak_Night
 
         //Comands
         static readonly string[] gameplayCommands = { "i", "inspect","x", "eximine", "p", "pickup", "d", "drop", "h", "hide", "m", "map", "u", "use", "ping" };
-        static readonly string[] editingCommands = { "add", "remove", "pickup", "place", "change" };
+        static readonly string[] editingCommands = { "a", "add", "r", "remove", "pu", "pickup", "pa", "place", "c", "change" };
 
         //Display
         Vector2 roomPosition;
@@ -61,6 +61,11 @@ namespace Freak_Night
         bool isMapDisplaying;
         Queue<string> sideTextArea;
         string[] inputTextArea;
+
+        //Edit Mode Stuff
+        Item pickedUpItem;
+        Interactable pickedUpInteractable;
+        Room pickedUpRoom;
 
         //Player
         Player player;
@@ -104,12 +109,16 @@ namespace Freak_Night
             isEditing = false;
             isMapDisplaying = true;
 
+            pickedUpItem = null;
+            pickedUpInteractable = null;
+            pickedUpRoom = null;
+
             roomID = 0;
 
             player = new Player(Vector2.One, centrePoint, new List<Item>() { });
 
             sideTextArea = new Queue<string>();
-            inputTextArea = new string[2] { "", ""};
+            inputTextArea = new string[3] { "", "", ""};
 
             base.Initialize();
         }
@@ -173,7 +182,7 @@ namespace Freak_Night
 
 
         //"x", "eximine", "p", "pickup", "h", "hide", "m", "map", "u", "use", "ping"
-
+        //"a", "add", "r", "remove", "pu", "pickup", "pa", "place", "c", "change"
         private void TextInputHandler(object sender, TextInputEventArgs args)
         {
             var pressedKey = args.Key;
@@ -189,39 +198,34 @@ namespace Freak_Night
                         Item item;
                         if (inputTextArea[0].Split(' ').Length > 1 && currentRoom.FindItem(inputTextArea[0].Split(' ')[1], out item))
                         {
-                            inputTextArea[0] = "";
-                            inputTextArea[1] = item.description;
+                            AddStringToBottom(item.description);
                         }
                         else
                         {
-                            inputTextArea[0] = "";
-                            inputTextArea[1] = "Couldn't find an item by that name.";
+                            AddStringToBottom("Couldn't find an item by that name.");
                         }
                     }
-                    else if (inputTextArea[0].Split(' ').Length > 1 && command == "p" || command == "pickup")
+                    else if (command == "p" || command == "pickup")
                     {
                         Item item;
-                        if (currentRoom.FindItem(inputTextArea[0].Split(' ')[1], out item))
+                        if (inputTextArea[0].Split(' ').Length > 1 && currentRoom.FindItem(inputTextArea[0].Split(' ')[1], out item))
                         {
-                            inputTextArea[0] = "";
-                            inputTextArea[1] = "Picked up " + item.name.ToLower() + ".";
+                            AddStringToBottom("Picked up " + item.name.ToLower() + ".");
 
                             player.AddItem(item);
                             currentRoom.RemoveItem(item);
                         }
                         else
                         {
-                            inputTextArea[0] = "";
-                            inputTextArea[1] = "Couldn't find an item by that name.";
+                            AddStringToBottom("Couldn't find an item by that name.");
                         }
                     }
-                    else if (inputTextArea[0].Split(' ').Length > 1 && command == "d" || command == "drop")
+                    else if (command == "d" || command == "drop")
                     {
                         Item item;
-                        if (player.FindItem(inputTextArea[0].Split(' ')[1], out item))
+                        if (inputTextArea[0].Split(' ').Length > 1 && player.FindItem(inputTextArea[0].Split(' ')[1], out item))
                         {
-                            inputTextArea[0] = "";
-                            inputTextArea[1] = "Dropped " + item.name + ".";
+                            AddStringToBottom("Dropped " + item.name + ".");
 
                             currentRoom.AddItem(item, player.GetRoomPosition());
                             player.RemoveItem(item);
@@ -236,15 +240,16 @@ namespace Freak_Night
                         }
                         else
                         {
-                            inputTextArea[0] = "";
-                            inputTextArea[1] = "Couldn't find a place to hide.";
+                            AddStringToBottom("Couldn't find a place to hide.");
                         }
                     }
                     else if (command == "m" || command == "map")
                     {
 
                     }
-                    else if ((inputTextArea[0].Split(' ').Length > 2 && inputTextArea[0].Split(' ')[2].ToLower() != "in") ||
+                    else if (
+                        (inputTextArea[0].Split(' ').Length > 2 &&
+                        inputTextArea[0].Split(' ')[2].ToLower() != "on") ||
                         (inputTextArea[0].Split(' ').Length > 3) &&
                         command == "u" || command == "use")
                     {
@@ -256,8 +261,7 @@ namespace Freak_Night
                     }
                     else
                     {
-                        inputTextArea[0] = "";
-                        inputTextArea[1] = "Couldn't find a command to match what you are trying to do.";
+                        AddStringToBottom("Couldn't find a command to match what you are trying to do.");
                     }
                 }
                 else if (pressedKey == Keys.Back && inputTextArea[0].Length > 0)
@@ -277,8 +281,417 @@ namespace Freak_Night
             {
                 if (pressedKey == Keys.Enter)
                 {
-                    string command = Array.Find<string>(gameplayCommands, command => command == inputTextArea[0].Split(' ')[0]);
+                    Room currentRoom = building.GetRoomByID(roomID);
+                    string command = Array.Find<string>(editingCommands, command => command == inputTextArea[0].Split(' ')[0]);
+                    
+                    if (command == "a" || command == "add" && inputTextArea[0].Split(' ').Length > 1)
+                    {
+                        if (
+                            inputTextArea[0].Split(' ')[1] == "item" &&
+                            currentScene == GameScene.RoomScene &&
+                            !currentRoom.FindItem(player.GetRoomPosition()))
+                        {
+                            currentRoom.AddItem(new Item(), player.GetRoomPosition());
+                            AddStringToBottom("Item was added at " + player.GetRoomPosition().X + ", " + player.GetRoomPosition().Y);
+                        }
+                        else if (
+                            (inputTextArea[0].Split(' ')[1] == "interactable" ||
+                            inputTextArea[0].Split(' ')[1] == "intr") &&
+                            currentScene == GameScene.RoomScene &&
+                            !currentRoom.FindInteractable(player.GetRoomPosition()))
+                        {
+                            currentRoom.AddInteractable(new Interactable(), player.GetRoomPosition());
+                            AddStringToBottom("Interactable was added at " + player.GetRoomPosition().X + ", " + player.GetRoomPosition().Y);
+                        }
+                        else if (
+                            inputTextArea[0].Split(' ')[1] == "room" &&
+                            currentScene == GameScene.MapScene &&
+                            !building.FindRoom(PositionToMap(player.GetMapPosition())))
+                        {
+                            building.AddRoom(PositionToMap(player.GetMapPosition()));
+                            AddStringToBottom("Room was added at " + PositionToMap(player.GetMapPosition()).X + ", " + PositionToMap(player.GetMapPosition()).Y);
+                        }
+                        else
+                        {
+                            AddStringToBottom("Couldn't find an object of that type to create.");
+                        }
+                    }
+                    else if (inputTextArea[0].Split(' ').Length > 1 && (command == "r" || command == "remove"))
+                    {
+                        if (inputTextArea[0].Split(' ')[1] == "item")
+                        {
+                            currentRoom.RemoveItem(player.GetRoomPosition());
+                            AddStringToBottom("Item was removed at " + player.GetRoomPosition().X + ", " + player.GetRoomPosition().Y);
+                        }
+                        else if (inputTextArea[0].Split(' ')[1] == "interactable" || inputTextArea[0].Split(' ')[1] == "intr")
+                        {
+                            currentRoom.RemoveInteractable(player.GetRoomPosition());
+                            AddStringToBottom("Interactable was removed at " + player.GetRoomPosition().X + ", " + player.GetRoomPosition().Y);
 
+                        }
+                        else if (inputTextArea[0].Split(' ')[1] == "room")
+                        {
+                            Room room;
+
+                            if (building.FindRoom(PositionToMap(player.GetMapPosition()), out room) && room.GetRoomID() != roomID)
+                            {
+                                building.RemoveRoom(PositionToMap(player.GetMapPosition()));
+                                AddStringToBottom("Room was removed at " + PositionToMap(player.GetMapPosition()).X + ", " + PositionToMap(player.GetMapPosition()).Y);
+                            }
+                            else
+                            {
+                                AddStringToBottom("Cannot remove the room you are in.");
+                            }
+                        }
+                        else
+                        {
+                            Item item;
+                            Interactable interactable;
+                            Room room;
+                            if (
+                                currentRoom.FindItem(inputTextArea[0].Split(' ')[1], out item) &&
+                                currentScene == GameScene.RoomScene)
+                            {
+                                currentRoom.RemoveItem(item);
+                                AddStringToBottom(inputTextArea[0].Split(' ')[1] + " item removed.");
+
+                            }
+                            else if (
+                                currentRoom.FindInteractable(inputTextArea[0].Split(' ')[1], out interactable) &&
+                                currentScene == GameScene.RoomScene)
+                            {
+                                currentRoom.RemoveInteractable(interactable);
+                                AddStringToBottom(inputTextArea[0].Split(' ')[1] + " interactable removed.");
+
+                            }
+                            else if (
+                                building.FindRoom(inputTextArea[0].Split(' ')[1], out room) &&
+                                currentScene == GameScene.MapScene)
+                            {
+                                building.RemoveRoom(room);
+                                AddStringToBottom(inputTextArea[0].Split(' ')[1] + " room removed.");
+                            }
+                            else
+                            {
+                                AddStringToBottom("Couldn't find an object of that name/type.");
+                            }
+                        }
+                    }
+                    else if (command == "pu" || command == "pickup")
+                    {
+                        Item item;
+                        Interactable interactable;
+                        Room room;
+                        if (
+                            currentRoom.FindItem(player.GetRoomPosition(), out item) &&
+                            currentScene == GameScene.RoomScene &&
+                            pickedUpItem == null &&
+                            pickedUpInteractable == null &&
+                            pickedUpRoom == null)
+                        {
+                            pickedUpItem = item;
+                            AddStringToBottom("Picked up " + item.name);
+                        }
+                        else if (
+                            currentRoom.FindInteractable(player.GetRoomPosition(), out interactable) &&
+                            currentScene == GameScene.RoomScene &&
+                            pickedUpItem == null &&
+                            pickedUpInteractable == null &&
+                            pickedUpRoom == null)
+                        {
+                            pickedUpInteractable = interactable;
+                            AddStringToBottom("Picked up " + interactable.name);
+                        }
+                        else if (
+                            building.FindRoom(player.GetMapPosition(), out room) &&
+                            currentScene == GameScene.MapScene &&
+                            pickedUpItem == null &&
+                            pickedUpInteractable == null &&
+                            pickedUpRoom == null)
+                        {
+                            pickedUpRoom = room;
+                            AddStringToBottom("Picked up " + room.name);
+                        }
+                    }
+                    else if (command == "pa" || command == "place")
+                    {
+                        if (GameScene.RoomScene == currentScene)
+                        {
+                            if (pickedUpItem != null)
+                            {
+                                currentRoom.AddItem(pickedUpItem, player.GetRoomPosition());
+                                AddStringToBottom("Picked up " + pickedUpItem.name);
+                                pickedUpItem = null;
+                            }
+                            else if (pickedUpInteractable != null)
+                            {
+                                currentRoom.AddInteractable(pickedUpInteractable, player.GetRoomPosition());
+                                AddStringToBottom("Picked up " + pickedUpInteractable.name);
+                                pickedUpInteractable = null;
+                            }
+                        }
+                        else if (pickedUpRoom != null)
+                        {
+                            building.AddRoom(pickedUpRoom, PositionToMap(player.GetMapPosition()));
+                            AddStringToBottom("Picked up " + pickedUpRoom.name);
+                            pickedUpRoom = null;
+                        }
+                    }
+                    else if (inputTextArea[0].Split(' ').Length > 2 && (command == "c" || command == "change"))
+                    {
+                        Item item;
+                        Interactable interactable;
+                        Room room;
+                        int result;
+                        int[] array = new int[4] { 0, 0, 0, 0 };
+                        if (
+                            currentRoom.FindItem(player.GetRoomPosition(), out item) &&
+                            currentScene == GameScene.RoomScene)
+                        {
+                            
+                            switch (inputTextArea[0].Split(' ')[1])
+                            {
+                                case "name":
+                                    item.name = inputTextArea[0].Split(' ')[2];
+                                    break;
+                                case "description":
+                                    item.description = " ";
+                                    for (int i = 2; i < inputTextArea[0].Split(' ').Length; i++)
+                                    {
+                                        item.description += inputTextArea[0].Split(' ')[i] + " ";
+                                    }
+                                    break;
+                                case "desc":
+                                    item.description = " ";
+                                    for (int i = 2; i < inputTextArea[0].Split(' ').Length; i++)
+                                    {
+                                        item.description += inputTextArea[0].Split(' ')[i] + " ";
+                                    }
+                                    break;
+                                case "id":
+                                    if (int.TryParse(inputTextArea[0].Split(' ')[2], out result))
+                                    {
+                                        item.id = result;
+                                    }
+                                    break;
+                                case "xpos":
+                                    if (int.TryParse(inputTextArea[0].Split(' ')[2], out result))
+                                    {
+                                        item.xPos = result;
+                                    }
+                                    break;
+                                case "ypos":
+                                    if (int.TryParse(inputTextArea[0].Split(' ')[2], out result))
+                                    {
+                                        item.yPos = result;
+                                    }
+                                    break;
+                                case "textcolor":
+                                    for (int i = 2; i < inputTextArea[0].Split(' ').Length; i++)
+                                    {
+                                        if (int.TryParse(inputTextArea[0].Split(" ")[i],out result))
+                                        {
+                                            array[i - 2] = result;
+                                        }
+                                    }
+                                    item.textColor = new Color(array[0], array[1], array[2]);
+                                    break;
+                                case "tc":
+                                    for (int i = 2; i < inputTextArea[0].Split(' ').Length; i++)
+                                    {
+                                        if (int.TryParse(inputTextArea[0].Split(" ")[i], out result))
+                                        {
+                                            array[i - 2] = result;
+                                        }
+                                    }
+                                    item.textColor = new Color(array[0], array[1], array[2]);
+                                    break;
+                                case "textstring":
+                                    item.textString = inputTextArea[0].Split(' ')[2].ToCharArray()[0].ToString().ToLower();
+                                    break;
+                                case "ts":
+                                    item.textString = inputTextArea[0].Split(' ')[2].ToCharArray()[0].ToString().ToLower();
+                                    break;
+                                default:
+                                    break;
+                            }
+                            AddStringToBottom("");
+                        }
+                        else if (
+                            currentRoom.FindInteractable(player.GetRoomPosition(), out interactable) &&
+                            currentScene == GameScene.RoomScene)
+                        {
+                            switch (inputTextArea[0].Split(' ')[1])
+                            {
+                                case "name":
+                                    interactable.name = inputTextArea[0].Split(' ')[2];
+                                    break;
+                                case "id":
+                                    if (int.TryParse(inputTextArea[0].Split(' ')[2], out result))
+                                    {
+                                        interactable.id = result;
+                                    }
+                                    break;
+                                case "xpos":
+                                    if (int.TryParse(inputTextArea[0].Split(' ')[2], out result))
+                                    {
+                                        interactable.xPos = result;
+                                    }
+                                    break;
+                                case "ypos":
+                                    if (int.TryParse(inputTextArea[0].Split(' ')[2], out result))
+                                    {
+                                        interactable.yPos = result;
+                                    }
+                                    break;
+                                case "textcolor":
+                                    for (int i = 2; i < inputTextArea[0].Split(' ').Length; i++)
+                                    {
+                                        if (int.TryParse(inputTextArea[0].Split(" ")[i], out result))
+                                        {
+                                            array[i - 2] = result;
+                                        }
+                                    }
+                                    interactable.textColor = new Color(array[0], array[1], array[2]);
+                                    break;
+                                case "tc":
+                                    for (int i = 2; i < inputTextArea[0].Split(' ').Length; i++)
+                                    {
+                                        if (int.TryParse(inputTextArea[0].Split(" ")[i], out result))
+                                        {
+                                            array[i - 2] = result;
+                                        }
+                                    }
+                                    interactable.textColor = new Color(array[0], array[1], array[2]);
+                                    break;
+                                case "textstring":
+                                    interactable.textString = inputTextArea[0].Split(' ')[2].ToCharArray()[0].ToString().ToUpper();
+                                    break;
+                                case "ts":
+                                    interactable.textString = inputTextArea[0].Split(' ')[2].ToCharArray()[0].ToString().ToUpper();
+                                    break;
+                                default:
+                                    break;
+                            }
+                            AddStringToBottom("");
+                        }
+                        else if (
+                            building.FindRoom(PositionToMap(player.GetMapPosition()), out room) &&
+                            currentScene == GameScene.MapScene)
+                        {
+                            switch (inputTextArea[0].Split(' ')[1])
+                            {
+                                case "name":
+                                    room.name = inputTextArea[0].Split(' ')[2];
+                                    break;
+                                case "id":
+                                    if (int.TryParse(inputTextArea[0].Split(' ')[2], out result))
+                                    {
+                                        room.id = result;
+                                    }
+                                    break;
+                                case "xpos":
+                                    if (int.TryParse(inputTextArea[0].Split(' ')[2], out result))
+                                    {
+                                        room.xPos = result;
+                                    }
+                                    break;
+                                case "ypos":
+                                    if (int.TryParse(inputTextArea[0].Split(' ')[2], out result))
+                                    {
+                                        room.yPos = result;
+                                    }
+                                    break;
+                                case "width":
+                                    if (int.TryParse(inputTextArea[0].Split(' ')[2], out result))
+                                    {
+                                        room.width = result;
+                                    }
+                                    break;
+                                case "w":
+                                    if (int.TryParse(inputTextArea[0].Split(' ')[2], out result))
+                                    {
+                                        room.width = result;
+                                    }
+                                    break;
+                                case "height":
+                                    if (int.TryParse(inputTextArea[0].Split(' ')[2], out result))
+                                    {
+                                        room.height = result;
+                                    }
+                                    break;
+                                case "h":
+                                    if (int.TryParse(inputTextArea[0].Split(' ')[2], out result))
+                                    {
+                                        room.height = result;
+                                    }
+                                    break;
+                                case "connectedrooms":
+                                    for (int i = 2; i < inputTextArea[0].Split(' ').Length; i++)
+                                    {
+                                        if (int.TryParse(inputTextArea[0].Split(" ")[i], out result))
+                                        {
+                                            array[i - 2] = result;
+                                        }
+                                    }
+                                    room.connectedRooms = new int[4] { (int)array[0], (int)array[1], (int)array[2], (int)array[3] };
+                                    break;
+                                case "connections":
+                                    for (int i = 2; i < inputTextArea[0].Split(' ').Length; i++)
+                                    {
+                                        if (int.TryParse(inputTextArea[0].Split(" ")[i], out result))
+                                        {
+                                            array[i - 2] = result;
+                                        }
+                                    }
+                                    room.connectedRooms = new int[4] { (int)array[0], (int)array[1], (int)array[2], (int)array[3] };
+                                    break;
+                                case "con":
+                                    for (int i = 2; i < inputTextArea[0].Split(' ').Length; i++)
+                                    {
+                                        if (int.TryParse(inputTextArea[0].Split(" ")[i], out result))
+                                        {
+                                            array[i - 2] = result;
+                                        }
+                                    }
+                                    room.connectedRooms = new int[4] { (int)array[0], (int)array[1], (int)array[2], (int)array[3] };
+                                    break;
+                                case "isexplored":
+                                    if (inputTextArea[0].Split(' ')[2] == "false")
+                                    {
+                                        room.isExplored = false;
+                                    }
+                                    else
+                                    {
+                                        room.isExplored = true;
+                                    }
+                                    break;
+                                default:
+                                    break;
+                            }
+                            AddStringToBottom("");
+                        }
+                        else
+                        {
+                            AddStringToBottom("Couldn't find an attribute by that name.");
+                        }
+                    }
+                    else
+                    {
+                        AddStringToBottom("Couldn't find a command to match what you are trying to do.");
+                    }
+                }
+                else if (pressedKey == Keys.Back && inputTextArea[0].Length > 0)
+                {
+                    inputTextArea[0] = inputTextArea[0].Remove(inputTextArea[0].Length - 1);
+                }
+                else if (pressedKey <= (Keys)31)
+                {
+
+                }
+                else 
+                {
+                    inputTextArea[0] += character.ToString();
                 }
             }
         }
@@ -293,6 +706,43 @@ namespace Freak_Night
             {
                 return false; 
             }
+        }
+
+        private Vector2 PositionToMap(Vector2 position)
+        {
+            return (position - centrePoint) / 2;
+        }
+
+        private Vector2 MapToPosition(Vector2 position)
+        {
+            return (position + centrePoint) * 2;
+        }
+
+        //UI functions
+
+        private void QueueStringToSide(string textToQueue)
+        {
+            for (int i = 0; i < textToQueue.Length; i += (screenWidth / fontWidth) - horizontalDivider - 1)
+            {
+                sideTextArea.Enqueue(textToQueue.Substring(i, (int)MathF.Min((screenWidth / fontWidth) - horizontalDivider - 1, textToQueue.Length - i)));
+            }
+        }
+
+        private void AddStringToBottom(string textToAdd)
+        {
+            for (int i = 0; i < textToAdd.Length; i += (screenWidth / fontWidth))
+            {
+                if (i == 0)
+                {
+                    inputTextArea[1] = (textToAdd.Substring(i, (int)MathF.Min((screenWidth / fontWidth), textToAdd.Length - i)));
+                }
+                else
+                {
+                    inputTextArea[2] = (textToAdd.Substring(i, (int)MathF.Min((screenWidth / fontWidth), textToAdd.Length - i)));
+                }
+            }
+
+            inputTextArea[0] = "";
         }
 
         //Main Menu Functions
@@ -325,6 +775,10 @@ namespace Freak_Night
 
             if (currentKeyboard.IsKeyDown(Keys.LeftControl) && currentKeyboard.IsKeyDown(Keys.RightAlt) && currentKeyboard.IsKeyDown(Keys.G))
             {
+                string path = Path.Combine(Content.RootDirectory, "ExampleBuilding.json");
+                building.BuildingToJSON(path);
+
+
                 defaultBackground = " ";
                 isEditing = false;
             }
@@ -382,7 +836,7 @@ namespace Freak_Night
                 player.SetMapPosition(player.GetMapPosition() + direction);
 
                 Room room;
-                if (building.FindRoom((player.GetMapPosition() - centrePoint) / 2, out room))
+                if (building.FindRoom(PositionToMap(player.GetMapPosition()), out room))
                 {
                     sideTextArea.Clear();
 
@@ -407,18 +861,10 @@ namespace Freak_Night
                     QueueStringToSide("height: " + room.GetRoomSize().Y);
 
                 }
-                else if (!building.FindRoom((player.GetMapPosition() - centrePoint) / 2))
+                else if (!building.FindRoom(PositionToMap(player.GetMapPosition())))
                 {
                     sideTextArea.Clear();
                 }
-            }
-        }
-
-        private void QueueStringToSide(string textToQueue)
-        {
-            for (int i = 0; i < textToQueue.Length; i += (screenWidth / fontWidth) - horizontalDivider - 1)
-            {
-                sideTextArea.Enqueue(textToQueue.Substring(i, (int)MathF.Min((screenWidth / fontWidth) - horizontalDivider - 1, textToQueue.Length - i)));
             }
         }
 
@@ -460,31 +906,43 @@ namespace Freak_Night
                 switch (interactable.GetID())
                 {
                     case 0:
-                        roomID = currentRoom.GetConnectedRooms()[0];
-                        if (building.GetRoomByID(roomID).FindInteractable("SouthDoor", out interactable))
+                        if (currentRoom.GetConnectedRooms()[0] != -1)
                         {
-                            player.SetRoomPosition(interactable.GetPosition() + new Vector2(0, -1));
+                            roomID = currentRoom.GetConnectedRooms()[0];
+                            if (building.GetRoomByID(roomID).FindInteractable("SouthDoor", out interactable))
+                            {
+                                player.SetRoomPosition(interactable.GetPosition() + new Vector2(0, -1));
+                            }
                         }
                         break;
                     case 1:
-                        roomID = currentRoom.GetConnectedRooms()[1];
-                        if (building.GetRoomByID(roomID).FindInteractable("WestDoor", out interactable))
+                        if (currentRoom.GetConnectedRooms()[1] != -1)
                         {
-                            player.SetRoomPosition(interactable.GetPosition() + new Vector2(1, 0));
+                            roomID = currentRoom.GetConnectedRooms()[1];
+                            if (building.GetRoomByID(roomID).FindInteractable("WestDoor", out interactable))
+                            {
+                                player.SetRoomPosition(interactable.GetPosition() + new Vector2(1, 0));
+                            }
                         }
                         break;
                     case 2:
-                        roomID = currentRoom.GetConnectedRooms()[2];
-                        if (building.GetRoomByID(roomID).FindInteractable("NorthDoor", out interactable))
+                        if (currentRoom.GetConnectedRooms()[2] != -1)
                         {
-                            player.SetRoomPosition(interactable.GetPosition() + new Vector2(0, 1));
+                            roomID = currentRoom.GetConnectedRooms()[2];
+                            if (building.GetRoomByID(roomID).FindInteractable("NorthDoor", out interactable))
+                            {
+                                player.SetRoomPosition(interactable.GetPosition() + new Vector2(0, 1));
+                            }
                         }
                         break;
                     case 3:
-                        roomID = currentRoom.GetConnectedRooms()[3];
-                        if (building.GetRoomByID(roomID).FindInteractable("EastDoor", out interactable))
+                        if (currentRoom.GetConnectedRooms()[3] != -1)
                         {
-                            player.SetRoomPosition(interactable.GetPosition() + new Vector2(-1, 0));
+                            roomID = currentRoom.GetConnectedRooms()[3];
+                            if (building.GetRoomByID(roomID).FindInteractable("EastDoor", out interactable))
+                            {
+                                player.SetRoomPosition(interactable.GetPosition() + new Vector2(-1, 0));
+                            }
                         }
                         break;
                     case 4:
@@ -511,7 +969,7 @@ namespace Freak_Night
                     {
                         if (!sideTextArea.Contains(item.name))
                         {
-                            sideTextArea.Enqueue(item.name);
+                            QueueStringToSide(item.name);
                         }
                     }
                 }
@@ -520,20 +978,20 @@ namespace Freak_Night
             {
                 player.SetMapPosition(player.GetMapPosition() + direction);
                 Room room;
-                if (building.FindRoom((player.GetMapPosition() - centrePoint) / 2, out room) && sideTextArea.Count != 1 + room.GetItemCount())
+                if (building.FindRoom(PositionToMap(player.GetMapPosition()), out room) && sideTextArea.Count != 1 + room.GetItemCount())
                 {
                     sideTextArea.Clear();
-                    sideTextArea.Enqueue(room.name);
-                    sideTextArea.Enqueue("");
+                    QueueStringToSide(room.name);
+                    QueueStringToSide("");
                     foreach (Item item in room.GetItems())
                     {
                         if (!sideTextArea.Contains(item.name))
                         {
-                            sideTextArea.Enqueue(item.name);
+                            QueueStringToSide(item.name);
                         }
                     }
                 }
-                else if (!building.FindRoom((player.GetMapPosition() - centrePoint) / 2))
+                else if (!building.FindRoom(PositionToMap(player.GetMapPosition())))
                 {
                     sideTextArea.Clear();
                 }
@@ -558,7 +1016,7 @@ namespace Freak_Night
 
 
             _spriteBatch.Begin();
-            roomPosition = centrePoint - (building.GetRoomByID(roomID).GetRoomSize() / 2);
+            roomPosition = centrePoint - new Vector2(MathF.Floor(building.GetRoomByID(roomID).GetRoomSize().X / 2), MathF.Floor(building.GetRoomByID(roomID).GetRoomSize().Y / 2));
             Display(new Vector2(0.0f, -15.0f));
             _spriteBatch.End();
         }
@@ -606,13 +1064,9 @@ namespace Freak_Night
                 }
                 else if (i > verticalDivider)
                 {
-                    if (i - verticalDivider < 3 && j < inputTextArea[1].Length)
+                    if (j < inputTextArea[(i - verticalDivider) % 3].Length)
                     {
-                        displayText.text = inputTextArea[1].ToCharArray()[j].ToString();
-                    }
-                    else if (i - verticalDivider == 3 && j < inputTextArea[0].Length)
-                    {
-                        displayText.text = inputTextArea[0].ToCharArray()[j].ToString();
+                        displayText.text = inputTextArea[(i - verticalDivider) % 3].ToCharArray()[j].ToString();
                     }
                 }
             }

@@ -48,6 +48,13 @@ public class Building
         return rooms;
     }
 
+    public void AddRoom(Room room, Vector2 position)
+    {
+        room.xPos = (int)position.X;
+        room.yPos = (int)position.Y;
+        rooms.Add(room);
+    }
+
     public void AddRoom(Vector2 position)
     {
         rooms.Add(new Room((int)position.X, (int)position.Y));
@@ -66,6 +73,11 @@ public class Building
     public void RemoveRoom(int id)
     {
         rooms.Remove(rooms.Find(room => room.GetRoomID() == id));
+    }
+
+    public void RemoveRoom(Room room)
+    {
+        rooms.Remove(room);
     }
 
     public bool FindRoom(Vector2 position)
@@ -155,25 +167,25 @@ public class Room
     public string name { get; set; }
     
     [JsonProperty("id")]
-    int id { get; set; }
+    public int id { get; set; }
 
     [JsonProperty("connectedRooms")]
-    int[] connectedRooms { get; set; }
+    public int[] connectedRooms { get; set; }
 
     [JsonProperty("xPos")]
-    int xPos { get; set; }
+    public int xPos { get; set; }
 
     [JsonProperty("yPos")]
-    int yPos { get; set; }
+    public int yPos { get; set; }
 
     [JsonProperty("width")]
-    int width { get; set; }
+    public int width { get; set; }
     
     [JsonProperty("height")]
-    int height { get; set; }
+    public int height { get; set; }
 
     [JsonProperty("isExplored")]
-    bool isExplored { get; set; }
+    public bool isExplored { get; set; }
 
     [JsonProperty("items")]
     List<Item> items { get; set; }
@@ -362,6 +374,7 @@ public class Room
     }
 
     //Removing Items
+
     public void RemoveItem(int xPos, int yPos)
     {
         Item item;
@@ -369,7 +382,11 @@ public class Room
         {
             items.Remove(item);
         }
-        
+
+    }
+    public void RemoveItem(Vector2 position)
+    {
+        RemoveItem((int)position.X, (int)position.Y);
     }
     public void RemoveItem(string name)
     {
@@ -388,14 +405,55 @@ public class Room
 
     public void AddItem(Item item, int xPos, int yPos)
     {
-        item.xPos = xPos; 
+        item.xPos = xPos;
         item.yPos = yPos;
         items.Add(item);
     }
-
+    
     public void AddItem(Item item, Vector2 position)
     {
         AddItem(item, (int)position.X, (int)position.Y);
+    }
+
+    //Removing Interactables
+
+    public void RemoveInteractable(int xPos, int yPos)
+    {
+        Interactable interactable;
+        if (FindInteractable(xPos, yPos, out interactable))
+        {
+            interactables.Remove(interactable);
+        }
+    }
+    public void RemoveInteractable(Vector2 position)
+    {
+        RemoveInteractable((int)position.X, (int)position.Y);
+    }
+    public void RemoveInteractable(string name)
+    {
+        Interactable interactable;
+        if (FindInteractable(name, out interactable))
+        {
+            interactables.Remove(interactable);
+        }
+    }
+    public void RemoveInteractable(Interactable interactable)
+    {
+        interactables.Remove(interactable);
+    }
+
+    //Adding Interactables
+
+    public void AddInteractable(Interactable interactable, int xPos, int yPos)
+    {
+        interactable.xPos = xPos;
+        interactable.yPos = yPos;
+        interactables.Add(interactable);
+    }
+
+    public void AddInteractable(Interactable interactable, Vector2 position)
+    {
+        AddInteractable(interactable, (int)position.X, (int)position.Y);
     }
 }
 
@@ -406,19 +464,19 @@ public class Interactable
     public string name { get; set; }
 
     [JsonProperty("id")]
-    int id { get; set; }
+    public int id { get; set; }
 
     [JsonProperty("xPos")]
-    int xPos { get; set; }
+    public int xPos { get; set; }
 
     [JsonProperty("yPos")]
-    int yPos { get; set; }
+    public int yPos { get; set; }
 
     [JsonProperty("textColor")]
-    Color textColor { get; set; }
+    public Color textColor { get; set; }
 
     [JsonProperty("textString")]
-    string textString { get; set; }
+    public string textString { get; set; }
 
     public Interactable()
     {
@@ -485,10 +543,10 @@ public class Item
     public int yPos { get; set; }
 
     [JsonProperty("textColor")]
-    Color textColor { get; set; }
+    public Color textColor { get; set; }
 
     [JsonProperty("textString")]
-    string textString { get; set; }
+    public string textString { get; set; }
 
     public Item()
     {
