@@ -205,6 +205,7 @@ public class Room
         yPos = 0;
         width = 1;
         height = 1;
+        isExplored = true;
         items = new List<Item>();
         interactables = new List<Interactable>();
     }
@@ -218,6 +219,7 @@ public class Room
         yPos = _yPos;
         width = 1;
         height = 1;
+        isExplored = true;
         items = new List<Item>();
         interactables = new List<Interactable>();
     }
